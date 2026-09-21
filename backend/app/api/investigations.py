@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 from app.services.database import get_db
 from app.models.investigation import CaseModel
-from app.schemas.investigation import InvestigationResult, InvestigationRequest, EvidenceItem
+from app.schemas.investigation import InvestigationResult, InvestigationRequest
 from app.agent.investigator import investigator_agent
 
 router = APIRouter(prefix="/api/investigations", tags=["Investigations"])
@@ -20,7 +20,6 @@ async def run_investigation(
     """
     case = db.query(CaseModel).filter(CaseModel.case_id == case_id).first()
     if not case:
-        # Create case entry if not existing
         case = CaseModel(
             case_id=case_id,
             status="INVESTIGATING",
@@ -35,11 +34,11 @@ async def run_investigation(
         case.updated_at = datetime.utcnow()
         db.commit()
 
-    # Execute Agent workflow
-    agent_output = await investigator_agent.investigate_case(case_id)
+    # Execute Agent 12-step workflow
+    agent_output = await investigator_agent.investigate(case_id, body.notes)
 
     # Persist updated investigation findings into SQLite database
-    case.status = "COMPLETED"
+    case.status = agent_output.status
     case.verdict = agent_output.verdict
     case.fraud_probability = agent_output.fraud_probability
     case.pattern = agent_output.pattern
@@ -49,27 +48,4 @@ async def run_investigation(
         case.notes = body.notes
     db.commit()
 
-    # Convert evidence items for API response
-    evidence_list = [
-        EvidenceItem(
-            id=e.id,
-            type=e.type,
-            details=e.details,
-            risk_signal=e.risk_signal
-        )
-        for e in agent_output.collected_evidence
-    ]
-
-    return InvestigationResult(
-        case_id=case.case_id,
-        status=case.status,
-        verdict=case.verdict,
-        fraud_probability=case.fraud_probability,
-        pattern=case.pattern,
-        exposure=case.exposure,
-        evidence_count=len(evidence_list),
-        reasoning_summary=agent_output.reasoning_summary,
-        evidence=evidence_list,
-        created_at=case.created_at,
-        updated_at=case.updated_at
-    )
+    return agent_output

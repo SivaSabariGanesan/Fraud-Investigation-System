@@ -36,6 +36,7 @@ class InvestigationState(BaseModel):
     exposure: float = 0.0
     investigation_status: str = "PENDING"  # PENDING, IN_PROGRESS, COMPLETED, FAILED
     verification_status: Optional[str] = None  # e.g., UNVERIFIED, VERIFIED_CLEAN, VERIFIED_FRAUD
+    verdict: Optional[str] = None  # APPROVED, DECLINED, NEEDS_REVIEW
     fraud_probability: Optional[float] = Field(default=None, ge=0.0, le=1.0)
     pattern: Optional[str] = None
     investigation_notes: List[str] = Field(default_factory=list)
