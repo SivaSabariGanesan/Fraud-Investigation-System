@@ -12,36 +12,18 @@ export function App() {
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   const loadCases = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await apiService.getCases();
       setCases(data);
-    } catch {
-      // Fallback sample data if backend connection fails during early dev startup
-      setCases([
-        {
-          case_id: 'CASE-2026-001',
-          status: 'COMPLETED',
-          verdict: 'DECLINED',
-          fraud_probability: 0.94,
-          pattern: 'Account Takeover & Device Spoofing',
-          exposure: 4340.50,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          case_id: 'CASE-2026-002',
-          status: 'PENDING',
-          verdict: null,
-          fraud_probability: 0.76,
-          pattern: 'Synthetic ID & Velocity Surge',
-          exposure: 12500.00,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }
-      ]);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unable to connect to investigation service.';
+      setError(msg);
+      setCases([]);
     } finally {
       setLoading(false);
     }
@@ -73,6 +55,8 @@ export function App() {
               <Dashboard
                 cases={cases}
                 loading={loading}
+                error={error}
+                onRefresh={loadCases}
                 onSelectCase={handleSelectCase}
               />
             )}
@@ -81,6 +65,7 @@ export function App() {
               <Cases
                 cases={cases}
                 loading={loading}
+                error={error}
                 onRefresh={loadCases}
                 onSelectCase={handleSelectCase}
               />

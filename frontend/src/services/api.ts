@@ -21,16 +21,24 @@ export const apiService = {
     return response.data;
   },
 
-  async getCaseById(caseId: string): Promise<Case> {
+  async getCase(caseId: string): Promise<Case> {
     const response = await apiClient.get<Case>(`/api/cases/${caseId}`);
     return response.data;
   },
 
-  async runInvestigation(caseId: string, notes?: string): Promise<InvestigationResult> {
+  async getCaseById(caseId: string): Promise<Case> {
+    return this.getCase(caseId);
+  },
+
+  async investigateCase(caseId: string, notes?: string): Promise<InvestigationResult> {
     const response = await apiClient.post<InvestigationResult>(`/api/investigations/${caseId}`, {
       notes: notes || null,
       force_reinvestigate: true,
     });
     return response.data;
+  },
+
+  async runInvestigation(caseId: string, notes?: string): Promise<InvestigationResult> {
+    return this.investigateCase(caseId, notes);
   },
 };
