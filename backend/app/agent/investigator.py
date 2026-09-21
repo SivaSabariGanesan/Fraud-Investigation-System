@@ -78,7 +78,14 @@ class FraudInvestigatorAgent:
         # Retrieve customer from graph or card owner
         target_cust_id = case_info.get("customer_id") if case_info else None
         if not target_cust_id and card_ids:
-            target_cust_id = "C08623"  # Fallback lookup for HHG-003
+            for c_id in card_ids:
+                try:
+                    cust_edges = await tigergraph_service.get_edges("Card", c_id, "reverse_OWNS")
+                    if cust_edges and cust_edges[0].get("to_id"):
+                        target_cust_id = cust_edges[0].get("to_id")
+                        break
+                except Exception:
+                    pass
 
         if target_cust_id:
             customer_info = await self._safe_tool_call(state, "get_customer", get_customer, target_cust_id)

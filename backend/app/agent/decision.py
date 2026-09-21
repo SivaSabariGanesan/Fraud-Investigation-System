@@ -213,9 +213,11 @@ def evaluate_policy_rules(
         verdict = "NEEDS_REVIEW"
         primary_pattern = "Customer Verification Pending"
         actions = ["AWAIT_EVIDENCE_RESPONSE", "ASSIGN_ANALYST_QUEUE", "MONITOR_CARD_ACTIVITY"]
+        pending_reqs = reasoning.pending_evidence_requests or facts.evidence_requests_info
+        pending_id = pending_reqs[0].get("request_id") if (pending_reqs and isinstance(pending_reqs[0], dict) and pending_reqs[0].get("request_id")) else "pending_verification"
         explanation = (
             f"Case '{case_id}' contains transaction(s) with risk_score {max_risk_score:.2f}. "
-            f"Pursuant to rules R2 and R10, because EvidenceRequest ER-HHG-003-001 status is pending, "
+            f"Pursuant to rules R2 and R10, because EvidenceRequest {pending_id} status is pending, "
             f"the investigation state remains UNRESOLVED / VERIFICATION_PENDING awaiting response."
         )
 

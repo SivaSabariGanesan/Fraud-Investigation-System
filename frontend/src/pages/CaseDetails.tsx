@@ -85,25 +85,24 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
   const customerEv = evidenceList.find(
     (e) => e.evidence_type === 'Customer' || e.type === 'Customer' || (e.evidence_id && e.evidence_id.startsWith('customer_'))
   );
-  const customerId = customerEv?.raw_data?.customer_id || customerEv?.details?.customer_id || (caseId === 'HHG-003' ? 'C08623' : 'N/A');
+  const customerId = customerEv?.raw_data?.customer_id || customerEv?.details?.customer_id || 'From Graph Evidence';
 
   // Find transaction evidence
   const txnEvs = evidenceList.filter(
     (e) => e.evidence_type === 'Transaction' || e.type === 'Transaction' || (e.evidence_id && e.evidence_id.startsWith('txn_'))
   );
   const mainTxn = txnEvs[0];
-  const transactionId = mainTxn?.transaction_id || mainTxn?.raw_data?.transaction_id || (investigation?.affected_transaction_ids?.[0]) || (caseId === 'HHG-003' ? '3530164' : 'N/A');
-  const txnAmount = mainTxn?.raw_data?.amount ?? mainTxn?.details?.amount ?? (caseId === 'HHG-003' ? 49.00 : caseData?.exposure);
-  const txnChannel = mainTxn?.raw_data?.channel ?? mainTxn?.details?.channel ?? (caseId === 'HHG-003' ? 'in_person' : 'N/A');
-  const txnProductCode = mainTxn?.raw_data?.product_code ?? mainTxn?.details?.product_code ?? (caseId === 'HHG-003' ? 'W' : 'N/A');
-  const txnRiskScore = mainTxn?.raw_data?.risk_score ?? mainTxn?.risk_signal ?? (caseId === 'HHG-003' ? 0.40 : null);
+  const transactionId = mainTxn?.transaction_id || mainTxn?.raw_data?.transaction_id || (investigation?.affected_transaction_ids?.[0]) || 'From Graph';
+  const txnAmount = mainTxn?.raw_data?.amount ?? mainTxn?.details?.amount ?? caseData?.exposure;
+  const txnChannel = mainTxn?.raw_data?.channel ?? mainTxn?.details?.channel ?? 'N/A';
+  const txnProductCode = mainTxn?.raw_data?.product_code ?? mainTxn?.details?.product_code ?? 'N/A';
+  const txnRiskScore = mainTxn?.raw_data?.risk_score ?? mainTxn?.risk_signal ?? null;
 
   // Cards
   const cardEvs = evidenceList.filter((e) => e.evidence_type === 'Card' || e.type === 'Card');
   const cardIds = Array.from(new Set([
     ...(investigation?.connected_card_ids || []),
     ...cardEvs.map((c) => c.card_id || c.raw_data?.card_id || c.details?.card_id).filter(Boolean) as string[],
-    ...(caseId === 'HHG-003' ? ['19739'] : []),
   ]));
 
   // Devices
@@ -342,7 +341,7 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
       </div>
 
       {/* 4. EVIDENCE REQUESTS */}
-      {(evidenceRequests.length > 0 || caseId === 'HHG-003') && (
+      {evidenceRequests.length > 0 && (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-5 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 font-semibold text-amber-300">
@@ -354,10 +353,7 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
           </div>
 
           <div className="space-y-2">
-            {(evidenceRequests.length > 0
-              ? evidenceRequests
-              : [{ request_id: 'ER-HHG-003-001', request_type: 'CUSTOMER_VERIFICATION', status: 'pending' }]
-            ).map((er, idx) => (
+            {evidenceRequests.map((er, idx) => (
               <div key={idx} className="p-3 rounded-lg bg-slate-950 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                 <div>
                   <span className="font-mono font-bold text-indigo-300 mr-2">{er.request_id}</span>

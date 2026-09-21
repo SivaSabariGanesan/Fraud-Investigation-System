@@ -144,7 +144,7 @@ export const Cases: React.FC<CasesProps> = ({ cases, loading, error, onRefresh, 
                   <tr key={c.case_id} className="hover:bg-slate-800/50 transition-colors">
                     <td className="py-3.5 px-4 font-mono font-semibold text-indigo-300">{c.case_id}</td>
                     <td className="py-3.5 px-4 font-mono text-xs text-slate-300">
-                      {c.case_id === 'HHG-003' ? 'C08623' : 'View Details'}
+                      Graph Connected
                     </td>
                     <td className="py-3.5 px-4">
                       <StatusBadge verdict={c.verdict} status={c.status} />

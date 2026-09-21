@@ -201,16 +201,17 @@ class TigerGraphService:
         if not self.is_configured():
             raise TigerGraphConnectionError("TigerGraph connection settings are incomplete.")
 
-        # Try executing installed GSQL query first
-        if case_id in ("HHG-003", "HHG003", "CASE-HHG-003"):
-            try:
-                query_result = await self.run_query("hhg003_policy_decision")
-                if query_result and not query_result.get("error") and "results" in query_result:
-                    return self._parse_hhg003_query_result(case_id, query_result.get("results", []))
-            except Exception as e:
-                logger.warning(f"Installed query hhg003_policy_decision execution error: {str(e)}")
+        # Try executing installed GSQL query first if available
+        try:
+            query_result = await self.run_query("hhg003_policy_decision")
+            if query_result and not query_result.get("error") and "results" in query_result:
+                parsed = self._parse_hhg003_query_result(case_id, query_result.get("results", []))
+                if parsed.get("entities", {}).get("ClosedCase"):
+                    return parsed
+        except Exception as e:
+            logger.warning(f"Installed query execution error: {str(e)}")
 
-        # Fallback to direct RESTPP edge/vertex traversal across FraudGraph
+        # General RESTPP edge/vertex traversal across FraudGraph for any case
         return await self._traverse_case_subgraph_restpp(case_id)
 
     def _parse_hhg003_query_result(self, case_id: str, results: List[Dict[str, Any]]) -> Dict[str, Any]:
