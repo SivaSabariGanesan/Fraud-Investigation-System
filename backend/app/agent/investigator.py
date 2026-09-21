@@ -263,6 +263,17 @@ class FraudInvestigatorAgent:
         final_status = "VERIFICATION_PENDING" if has_pending_ev_req else decision_result.decision_state
         final_verdict = "NEEDS_REVIEW" if has_pending_ev_req and decision_result.verdict != "DECLINED" else decision_result.verdict
 
+        rules_eval_list = [
+            {
+                "rule_id": r.rule_id,
+                "rule_name": r.rule_name,
+                "triggered": r.triggered,
+                "description": r.description,
+                "severity": r.severity
+            }
+            for r in decision_result.rules_evaluated
+        ]
+
         return InvestigationResult(
             case_id=case_id,
             customer_id=state.customer_id,
@@ -281,6 +292,7 @@ class FraudInvestigatorAgent:
             evidence_requests=evidence_req_results,
             next_best_actions_initial=["COLLECT_GRAPH_EVIDENCE", "EXTRACT_SUBGRAPH_SIGNALS"],
             next_best_actions_final=decision_result.recommended_actions,
+            rules_evaluated=rules_eval_list,
             SAR=sar_payload,
             stop_reason=stop_reason,
             tool_calls=[tc.model_dump() for tc in state.tool_calls],

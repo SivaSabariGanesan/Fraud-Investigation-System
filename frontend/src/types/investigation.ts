@@ -108,3 +108,72 @@ export interface InvestigationResult {
 export interface HealthCheckResponse {
   status: string;
 }
+
+export interface InvestigationHistoryItem {
+  investigation_id: string;
+  case_id: string;
+  customer_id?: string | null;
+  case_status?: string | null;
+  status?: string | null;
+  verdict?: Verdict;
+  created_at: string;
+  completed_at?: string | null;
+  reasoning_summary?: string | null;
+  stop_reason?: string | null;
+}
+
+export interface InvestigationHistoryResponse {
+  case_id: string;
+  investigations: InvestigationHistoryItem[];
+}
+
+export interface AuditEventItem {
+  id: number;
+  case_id: string;
+  investigation_id?: string | null;
+  event_type: string;
+  description?: string | null;
+  actor: 'SYSTEM' | 'AGENT' | 'ANALYST' | string;
+  metadata_json?: string | null;
+  created_at: string;
+}
+
+export interface RuleEvaluationItem {
+  rule_id: string;
+  rule_name?: string;
+  triggered: boolean;
+  reason?: string;
+  description?: string;
+  severity?: string;
+  created_at?: string;
+}
+
+export interface InvestigationDetailResponse {
+  investigation_id: string;
+  case_id: string;
+  customer_id?: string | null;
+  case_status?: CaseStatus;
+  status?: CaseStatus;
+  verdict?: Verdict;
+  fraud_probability?: number | null;
+  pattern?: string | null;
+  reasoning_summary?: string | null;
+  stop_reason?: string | null;
+  exposure?: number | null;
+  sar_status?: string | null;
+  sar_reason?: string | null;
+  llm_provider?: string | null;
+  llm_model?: string | null;
+  llm_latency?: number | null;
+  prompt_tokens?: number | null;
+  completion_tokens?: number | null;
+  total_tokens?: number | null;
+  created_at: string;
+  completed_at?: string | null;
+  evidence: EvidenceItem[];
+  actions_initial: string[];
+  actions_final: string[];
+  rules: RuleEvaluationItem[];
+  audit_events: AuditEventItem[];
+}
+

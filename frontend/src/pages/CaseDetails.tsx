@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Case, InvestigationResult, EvidenceItem, EvidenceRequest } from '../types/investigation';
+import {
+  Case,
+  InvestigationResult,
+  EvidenceItem,
+  EvidenceRequest,
+  InvestigationHistoryItem,
+  AuditEventItem,
+} from '../types/investigation';
 import { apiService } from '../services/api';
 import { StatusBadge } from '../components/StatusBadge';
+import { AuditTimeline } from '../components/AuditTimeline';
+import { InvestigationHistoryModal } from '../components/InvestigationHistoryModal';
 import { formatCurrency, formatDate } from '../lib/utils';
 import {
   Play,
@@ -24,6 +33,8 @@ import {
   Scale,
   Send,
   Sparkles,
+  History,
+  Eye,
 } from 'lucide-react';
 
 interface CaseDetailsProps {
@@ -35,6 +46,9 @@ interface CaseDetailsProps {
 export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCaseUpdated }) => {
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [investigation, setInvestigation] = useState<InvestigationResult | null>(null);
+  const [historyRuns, setHistoryRuns] = useState<InvestigationHistoryItem[]>([]);
+  const [auditEvents, setAuditEvents] = useState<AuditEventItem[]>([]);
+  const [selectedInvestigationId, setSelectedInvestigationId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [investigating, setInvestigating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +59,20 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
     try {
       const data = await apiService.getCase(caseId);
       setCaseData(data);
+
+      try {
+        const historyData = await apiService.getCaseInvestigations(caseId);
+        setHistoryRuns(historyData.investigations || []);
+      } catch {
+        setHistoryRuns([]);
+      }
+
+      try {
+        const auditData = await apiService.getCaseAuditTimeline(caseId);
+        setAuditEvents(auditData || []);
+      } catch {
+        setAuditEvents([]);
+      }
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : 'Unable to connect to investigation service.';
       setError(errorMsg);
@@ -72,8 +100,20 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
         exposure: result.exposure,
         created_at: result.created_at || caseData?.created_at || new Date().toISOString(),
         updated_at: result.updated_at || new Date().toISOString(),
-        customer_id: caseData?.customer_id,
+        customer_id: result.customer_id || caseData?.customer_id,
       });
+
+      // Refresh history & audit log
+      try {
+        const historyData = await apiService.getCaseInvestigations(caseId);
+        setHistoryRuns(historyData.investigations || []);
+      } catch {}
+
+      try {
+        const auditData = await apiService.getCaseAuditTimeline(caseId);
+        setAuditEvents(auditData || []);
+      } catch {}
+
       if (onCaseUpdated) onCaseUpdated();
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : 'Unable to run investigation. Check backend connection.';
@@ -926,63 +966,101 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
       </div>
 
       {/* ==================================================
+          INVESTIGATION HISTORY SECTION
+          ================================================== */}
+      <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="flex items-center gap-2">
+            <History className="w-5 h-5 text-indigo-400" />
+            <h3 className="font-bold text-slate-200 text-sm uppercase tracking-wider">Investigation History</h3>
+          </div>
+          <span className="text-xs text-slate-400 font-mono">
+            {historyRuns.length} Persistent Run{historyRuns.length !== 1 ? 's' : ''} Record
+          </span>
+        </div>
+
+        {historyRuns.length === 0 ? (
+          <div className="p-4 rounded-lg bg-slate-950 text-slate-500 text-xs font-mono text-center">
+            No historical investigation runs recorded yet for this case. Click "Investigate Case" to trigger run.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {historyRuns.map((run, idx) => (
+              <div
+                key={run.investigation_id || idx}
+                className="p-4 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 transition flex flex-col md:flex-row md:items-center justify-between gap-4"
+              >
+                <div className="space-y-2 flex-1">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="font-mono font-bold text-indigo-300 text-sm">
+                      #{run.investigation_id}
+                    </span>
+                    <StatusBadge status={run.status || run.case_status} verdict={run.verdict} showVerdict={true} />
+                    <span className="text-xs text-amber-400 font-mono">
+                      Stop Reason: {run.stop_reason || 'WORKFLOW_COMPLETE'}
+                    </span>
+                  </div>
+
+                  <div className="text-xs text-slate-400 font-mono">
+                    Run Date: <span className="text-slate-200">{formatDate(run.created_at)}</span>
+                  </div>
+
+                  {run.reasoning_summary && (
+                    <p className="text-xs text-slate-300 font-sans line-clamp-2 leading-relaxed">
+                      {run.reasoning_summary}
+                    </p>
+                  )}
+                </div>
+
+                <div className="shrink-0">
+                  <button
+                    onClick={() => setSelectedInvestigationId(run.investigation_id)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 text-xs font-semibold font-mono transition"
+                  >
+                    <Eye className="w-4 h-4" /> View Investigation
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ==================================================
           14. INVESTIGATION TIMELINE
           ================================================== */}
       <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 space-y-4">
         <h3 className="font-bold text-slate-200 text-sm uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-3">
-          <Clock className="w-4 h-4 text-indigo-400" /> Investigation Audit Timeline
+          <Clock className="w-4 h-4 text-indigo-400" /> Case Audit Timeline
         </h3>
 
-        <div className="relative border-l-2 border-slate-800 ml-3 space-y-6 pl-6 py-2 text-xs">
-          {/* Case opened */}
-          <div className="relative">
-            <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-indigo-500 border-2 border-slate-900" />
-            <span className="font-mono text-slate-400">{formatDate(caseData?.created_at)}</span>
-            <p className="font-bold text-slate-200 text-sm">Case Opened</p>
-            <p className="text-slate-400">Case registered in backend SQLite database.</p>
+        {auditEvents.length > 0 ? (
+          <AuditTimeline events={auditEvents} />
+        ) : (
+          <div className="relative border-l-2 border-slate-800 ml-3 space-y-6 pl-6 py-2 text-xs">
+            <div className="relative">
+              <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-indigo-500 border-2 border-slate-900" />
+              <span className="font-mono text-slate-400">{formatDate(caseData?.created_at)}</span>
+              <p className="font-bold text-slate-200 text-sm">Case Opened</p>
+              <p className="text-slate-400">Case registered in backend SQLite database.</p>
+            </div>
+            {evidenceList.length > 0 && (
+              <div className="relative">
+                <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-cyan-500 border-2 border-slate-900" />
+                <span className="font-mono text-slate-400">{formatDate(caseData?.updated_at || caseData?.created_at)}</span>
+                <p className="font-bold text-slate-200 text-sm">Evidence Collected</p>
+                <p className="text-slate-400">{evidenceList.length} evidence items retrieved from TigerGraph Cloud.</p>
+              </div>
+            )}
           </div>
-
-          {/* Evidence collected */}
-          {evidenceList.length > 0 && (
-            <div className="relative">
-              <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-cyan-500 border-2 border-slate-900" />
-              <span className="font-mono text-slate-400">{formatDate(caseData?.updated_at || caseData?.created_at)}</span>
-              <p className="font-bold text-slate-200 text-sm">Evidence Collected</p>
-              <p className="text-slate-400">{evidenceList.length} evidence items retrieved from TigerGraph Cloud.</p>
-            </div>
-          )}
-
-          {/* Evidence request created */}
-          {evidenceRequests.length > 0 && (
-            <div className="relative">
-              <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-amber-500 border-2 border-slate-900" />
-              <span className="font-mono text-slate-400">{formatDate(evidenceRequests[0].requested_at || evidenceRequests[0].created_at)}</span>
-              <p className="font-bold text-slate-200 text-sm">Evidence Request Created</p>
-              <p className="text-slate-400">Request ID: {evidenceRequests[0].request_id}</p>
-            </div>
-          )}
-
-          {/* Investigation run */}
-          {investigation && (
-            <div className="relative">
-              <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-purple-500 border-2 border-slate-900" />
-              <span className="font-mono text-slate-400">{formatDate(investigation.updated_at || new Date().toISOString())}</span>
-              <p className="font-bold text-slate-200 text-sm">Investigation Run</p>
-              <p className="text-slate-400">Autonomous 12-step agent workflow executed.</p>
-            </div>
-          )}
-
-          {/* Decision generated */}
-          {(investigation?.verdict || caseData?.verdict) && (
-            <div className="relative">
-              <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-emerald-500 border-2 border-slate-900" />
-              <span className="font-mono text-slate-400">{formatDate(caseData?.updated_at)}</span>
-              <p className="font-bold text-slate-200 text-sm">Decision Generated</p>
-              <p className="text-slate-400">Verdict: {investigation?.verdict || caseData?.verdict}</p>
-            </div>
-          )}
-        </div>
+        )}
       </div>
+
+      {/* Historical Investigation Snapshot Modal */}
+      <InvestigationHistoryModal
+        investigationId={selectedInvestigationId}
+        onClose={() => setSelectedInvestigationId(null)}
+      />
     </div>
   );
 };

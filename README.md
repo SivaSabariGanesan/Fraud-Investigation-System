@@ -1,6 +1,35 @@
-# Autonomous Fraud Investigation System - Foundation Setup
+# Autonomous Fraud Investigation System
 
-This repository contains the local development foundation for the **Fraud Investigation System**, integrating a FastAPI backend, SQLite local storage, TigerGraph fraud analytics layer, AI Fraud Agent architecture, and a React + TypeScript + Vite frontend dashboard.
+An end-to-end **Autonomous Fraud Investigation System** integrating a FastAPI backend, SQLite persistent audit storage, real TigerGraph Cloud graph database, Groq LLM reasoning (`openai/gpt-oss-120b`), deterministic R1–R10 policy engine, and a React + TypeScript + Vite frontend analyst dashboard.
+
+---
+
+## 🚀 Key Features & Capabilities
+
+- **Real TigerGraph Cloud Graph Analytics**:
+  - Connects to TigerGraph Cloud `FraudGraph` schema (`Customer`, `Card`, `Transaction`, `DeviceProfile`, `BillingRegion`, `EmailDomain`, `ClosedCase`, `EvidenceRequest`).
+  - Dynamic GSQL query invocation via Savanna RESTPP authentication (Token auto-generated & refreshed using Database Secret, no plain-text token exposure).
+  - Traverses graph relationships up to multi-hop connections for any arbitrary `case_id`.
+
+- **Groq LLM Reasoning Layer (`openai/gpt-oss-120b`)**:
+  - Analyzes normalized graph evidence and outputs structured reasoning summaries grounded strictly in evidence.
+  - Strictly prohibited from making final fraud decisions (fraud decision logic is reserved for the deterministic policy engine).
+  - Enforces prompt-level constraints (e.g., cannot claim transactions are "undisputed" when pending customer evidence requests exist).
+
+- **Deterministic Policy Engine (R1–R10)**:
+  - Evaluates rules including stolen card status, chargeback history, device fingerprint sharing, high velocity, disposable email usage, regional mismatch, and pending evidence requests.
+  - Outputs binding verdicts (`FRAUD_CONFIRMED`, `VERIFICATION_PENDING`, `NO_ACTION_REQUIRED`), SAR recommendations, and action lists.
+
+- **Persistent Investigation History & Audit Trail**:
+  - Every agent run persists an immutable, complete snapshot to SQLite (`investigations`, `investigation_evidence`, `investigation_actions`, `investigation_rules`, `audit_events`).
+  - Step-by-step workflow audit events (`INVESTIGATION_STARTED`, `EVIDENCE_COLLECTED`, `LLM_REASONING_COMPLETED`, `POLICY_EVALUATED`, `DECISION_GENERATED`, `INVESTIGATION_COMPLETED`).
+  - Instant historical playback served directly from SQLite without re-querying TigerGraph or Groq APIs.
+
+- **Fraud Investigation Analyst Dashboard (React + TS + Tailwind)**:
+  - Dynamic routing (`/cases/:caseId`).
+  - Interactive case evidence graphs, transaction breakdown with individual timestamps, and customer entity grounding.
+  - **Investigation History Modal**: View exact past investigation runs, R1-R10 rule results, and snapshots.
+  - **Chronological Audit Log**: Visual timeline showing fine-grained workflow lifecycle events.
 
 ---
 
@@ -11,120 +40,104 @@ task4/
 │
 ├── backend/
 │   ├── app/
-│   │   ├── __init__.py
-│   │   ├── main.py                  # FastAPI entry point, CORS, startup seed
+│   │   ├── main.py                  # FastAPI entry point, CORS, startup migrations
 │   │   │
 │   │   ├── api/                     # REST API Endpoints
-│   │   │   ├── __init__.py
-│   │   │   ├── health.py            # GET /health
-│   │   │   ├── cases.py             # GET /api/cases, GET /api/cases/{case_id}
-│   │   │   └── investigations.py    # POST /api/investigations/{case_id}
+│   │   │   ├── cases.py             # GET /api/cases, GET /api/cases/{case_id}, history & audit endpoints
+│   │   │   ├── investigations.py    # POST /api/investigations/{case_id}, GET /api/investigations/{id}
+│   │   │   └── health.py            # GET /health
 │   │   │
-│   │   ├── agent/                   # Agent Architecture & Workflow
-│   │   │   ├── __init__.py
-│   │   │   ├── investigator.py      # FraudInvestigatorAgent orchestrator
-│   │   │   ├── prompts.py           # Fraud evaluation prompts & templates
-│   │   │   ├── tools.py             # Evidence extraction & policy tools
-│   │   │   └── schemas.py           # Agent internal/output schemas
+│   │   ├── agent/                   # Autonomous Agent Architecture
+│   │   │   ├── investigator.py      # FraudInvestigatorAgent workflow orchestrator
+│   │   │   ├── reasoning.py         # Groq LLM reasoning layer (openai/gpt-oss-120b)
+│   │   │   ├── decision.py          # Deterministic R1–R10 policy engine
+│   │   │   ├── evidence.py          # Graph evidence normalization
+│   │   │   ├── tools.py             # TigerGraph query tools
+│   │   │   ├── context.py           # Investigation context builder
+│   │   │   ├── prompts.py           # System prompts & grounding rules
+│   │   │   └── schemas.py           # Agent data models & output schemas
 │   │   │
-│   │   ├── core/                    # App configuration
-│   │   │   ├── __init__.py
-│   │   │   └── config.py            # Pydantic BaseSettings (.env loader)
+│   │   ├── core/                    # Configuration & security
+│   │   │   └── config.py            # Settings loader (.env parser)
 │   │   │
 │   │   ├── models/                  # SQLAlchemy ORM Models
-│   │   │   ├── __init__.py
-│   │   │   └── investigation.py     # CaseModel (cases table)
+│   │   │   └── investigation.py     # CaseModel, InvestigationModel, AuditEventModel, etc.
 │   │   │
 │   │   ├── schemas/                 # Pydantic API Data Models
-│   │   │   ├── __init__.py
-│   │   │   └── investigation.py     # Case & Investigation schemas
+│   │   │   └── investigation.py     # Request/Response schemas & DTOs
 │   │   │
-│   │   ├── services/                # External Services & Database
-│   │   │   ├── __init__.py
-│   │   │   ├── database.py          # SQLAlchemy SQLite connection
-│   │   │   └── tigergraph.py        # TigerGraph RESTPP service abstraction
+│   │   ├── services/                # Backend Services
+│   │   │   ├── database.py          # SQLAlchemy SQLite setup (fraud.db)
+│   │   │   ├── tigergraph.py        # Real TigerGraph RESTPP & token service
+│   │   │   └── history_service.py   # Investigation snapshot & audit trail persistence
 │   │   │
-│   │   └── database/                # SQLite DB location (fraud.db)
+│   │   └── database/                # SQLite Storage (fraud.db)
+│   │
+│   ├── tests/                       # Backend Pytest Test Suite (35 tests)
+│   │   ├── test_real_tigergraph.py
+│   │   ├── test_groq_reasoning.py
+│   │   ├── test_grounding_regressions.py
+│   │   └── test_investigation_history_audit.py
 │   │
 │   ├── requirements.txt             # Python dependencies
-│   ├── .env.example                 # Backend environment variable template
-│   ├── .env                         # Local environment settings
-│   └── .gitignore
+│   └── .env                         # Environment variables (Credentials)
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── components/              # Navbar, Sidebar, StatusBadge
+│   │   ├── components/              # Navbar, Sidebar, StatusBadge, AuditTimeline, InvestigationHistoryModal
 │   │   ├── pages/                   # Dashboard, Cases, CaseDetails
 │   │   ├── services/                # Axios API client (api.ts)
 │   │   ├── types/                   # TypeScript interfaces (investigation.ts)
-│   │   ├── lib/                     # Utilities & formatting (utils.ts)
-│   │   ├── App.tsx                  # Root layout & routing state
-│   │   ├── main.tsx                 # React DOM mount point
-│   │   └── index.css                # Tailwind CSS & Theme variables
+│   │   ├── lib/                     # Utilities & date formatting
+│   │   ├── App.tsx                  # Routing & layout
+│   │   └── main.tsx                 # Entry point
 │   │
-│   ├── components.json              # shadcn/ui configuration
-│   ├── package.json                 # Node dependencies & dev scripts
-│   ├── vite.config.ts               # Vite configuration
-│   ├── tsconfig.json                # TypeScript compiler config
-│   ├── .env.example                 # Frontend environment variable template
-│   ├── .env                         # Local frontend environment settings
-│   └── .gitignore
+│   ├── package.json                 # Node dependencies & scripts
+│   └── vite.config.ts               # Vite bundler configuration
 │
-├── .gitignore
 └── README.md                        # Documentation
 ```
 
 ---
 
-## ⚙️ Backend Setup & Configuration
+## ⚙️ Backend Setup & Environment
 
 ### Prerequisites
 - Python 3.10+
 
 ### Environment Variables (`backend/.env`)
 ```ini
-# SQLite Database Configuration
+# Database
 DATABASE_URL=sqlite:///./app/database/fraud.db
 
-# TigerGraph Credentials & Endpoint Configuration
-TIGERGRAPH_HOST=https://your-tigergraph-instance.cloud.tigergraph.com
-TIGERGRAPH_TOKEN=your-tigergraph-restpp-token
+# Real TigerGraph Cloud Credentials
+TIGERGRAPH_HOST=https://your-instance.cloud.tigergraph.com
+TIGERGRAPH_SECRET=your-database-secret
 TIGERGRAPH_GRAPH_NAME=FraudGraph
-TIGERGRAPH_USERNAME=tigergraph
-TIGERGRAPH_PASSWORD=tigergraph
 
-# Agent / LLM Configuration (for future use)
-OPENAI_API_KEY=your-openai-key
-LLM_MODEL=gpt-4o
+# Groq LLM Credentials
+LLM_PROVIDER=groq
+GROQ_API_KEY=gsk_your_groq_api_key
+GROQ_MODEL=openai/gpt-oss-120b
 
-# Application Settings
+# App Environment
 APP_ENV=development
 LOG_LEVEL=INFO
 ```
 
-### Installation
+### Installation & Run
 ```bash
 cd backend
 pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
 ```
 
----
-
-## 💻 Running the Backend
-
-Start the FastAPI application with Uvicorn:
-```bash
-cd backend
-uvicorn app.main:app --reload
-```
-
+- **Swagger Documentation**: `http://localhost:8000/docs`
 - **Health Check**: `http://localhost:8000/health`
-- **Swagger API Docs**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
 
 ---
 
-## 🎨 Frontend Setup & Configuration
+## 🎨 Frontend Setup & Run
 
 ### Prerequisites
 - Node.js 18+ and `npm`
@@ -134,50 +147,41 @@ uvicorn app.main:app --reload
 VITE_API_BASE_URL=http://localhost:8000
 ```
 
-### Installation
+### Installation & Run
 ```bash
 cd frontend
 npm install
-```
-
----
-
-## 🚀 Running the Frontend
-
-Start the Vite development server:
-```bash
-cd frontend
 npm run dev
 ```
-The application will run locally at `http://localhost:5173`.
+
+Application runs locally at `http://localhost:5173`.
 
 ---
 
-## 🏗️ Architecture & Responsibilities
+## 🧪 Testing & Verification
 
-1. **TigerGraph Analytics Layer (Preserved Schema)**:
-   - **Vertices**: `Customer`, `Card`, `Transaction`, `DeviceProfile`, `BillingRegion`, `EmailDomain`, `ClosedCase`, `EvidenceRequest`.
-   - **Edges**: `OWNS`, `MADE`, `FROM_DEVICE`, `BILLED_IN`, `PURCHASER_EMAIL`, `INVOLVES`, `CONNECTED_TO`, `FOR_CASE`, `FOR_TRANSACTION`.
-   - Accessible via `TigerGraphService` abstraction in `app/services/tigergraph.py`.
+Run the full pytest suite (35 automated unit, regression, and integration tests):
+```bash
+cd backend
+py -m pytest tests -v
+```
 
-2. **SQLite Storage (`app/database/fraud.db`)**:
-   - Stores application cases, verdicts, risk scores, patterns, and financial exposures.
-   - Managed cleanly via SQLAlchemy ORM (`CaseModel`).
+Test coverage includes:
+1. `test_real_tigergraph.py`: Real RESTPP connectivity, token generation, query invocation.
+2. `test_groq_reasoning.py`: Groq LLM reasoning execution, prompt grounding, API key protection.
+3. `test_grounding_regressions.py`: Customer ID grounding (`C08623`), individual transaction timestamps, stop reason logic.
+4. `test_investigation_history_audit.py`: Persistent SQLite investigation runs, snapshot immutability, playback without external API calls, step-by-step audit logging.
 
-3. **Fraud Investigation Agent Architecture (`app/agent/`)**:
-   - `investigator.py`: Orchestrates case investigation workflow.
-   - `tools.py`: Queries graph data, extracts evidence signals, and evaluates policies (`LINKED_HISTORICAL_FRAUD`, `SUSPICIOUS_DEVICE_FINGERPRINT`, `DISPOSABLE_EMAIL_DOMAIN`).
-   - `prompts.py`: Reasoning prompt templates for LLM policy engine.
-   - `schemas.py`: Internal pydantic data contracts.
-
-4. **React Dashboard UI (`frontend/src/`)**:
-   - Built with Vite, React, TypeScript, Tailwind CSS, Lucide icons, and shadcn-style dark mode styling.
-   - Provides realtime status indicators, cases list filtering, and interactive case graph detail views.
+Build the frontend bundle:
+```bash
+cd frontend
+npm run build
+```
 
 ---
 
-## 🔮 Future Integration Points
+## 🔒 Security Compliance
 
-1. **LLM Reasoning Loop**: Connect `FraudInvestigatorAgent` to OpenAI / Claude API via `OPENAI_API_KEY` for multi-step reasoning over extracted TigerGraph evidence graphs.
-2. **TigerGraph RESTPP Custom Queries**: Execute GSQL custom graph algorithms (such as PageRank, Louvain Community Detection, or Multi-hop shortest paths) directly through the RESTPP endpoint abstraction.
-3. **Evidence Request Workflow**: Wire UI actions to automatically trigger `EvidenceRequest` vertex creation in TigerGraph when cases return `NEEDS_REVIEW`.
+- **No Plaintext Secrets**: TigerGraph Database Secrets and Groq API keys are read strictly from environment variables.
+- **Audit Data Sanitization**: Audit logs automatically strip sensitive key strings (`secret`, `key`, `token`, `password`) before database persistence.
+- **Isolated Playback**: Viewing historical investigation runs queries local SQLite snapshots only and makes zero calls to external APIs.

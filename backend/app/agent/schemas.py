@@ -88,6 +88,7 @@ class InvestigationResult(BaseModel):
     Complete project-required investigation output model.
     Contains full investigation findings, verdict, graph tracking, SAR, actions, and performance metrics.
     """
+    investigation_id: Optional[str] = None
     case_id: str
     customer_id: Optional[str] = None
     case_status: str = "COMPLETED"
@@ -105,6 +106,7 @@ class InvestigationResult(BaseModel):
     evidence_requests: List[EvidenceRequestResult] = Field(default_factory=list)
     next_best_actions_initial: List[str] = Field(default_factory=list)
     next_best_actions_final: List[str] = Field(default_factory=list)
+    rules_evaluated: List[Dict[str, Any]] = Field(default_factory=list)
     SAR: Optional[Dict[str, Any]] = None
     stop_reason: Optional[str] = "WORKFLOW_COMPLETE"
     tool_calls: List[Dict[str, Any]] = Field(default_factory=list)
