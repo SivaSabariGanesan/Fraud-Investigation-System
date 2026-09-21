@@ -10,12 +10,13 @@ class Settings(BaseSettings):
     # SQLite Database Config
     DATABASE_URL: str = "sqlite:///./app/database/fraud.db"
     
-    # TigerGraph Settings
-    TIGERGRAPH_HOST: str = "https://your-tigergraph-instance.cloud.tigergraph.com"
-    TIGERGRAPH_TOKEN: Optional[str] = "your-tigergraph-restpp-token"
+    # TigerGraph Credentials & Endpoint Settings
+    TIGERGRAPH_HOST: str = "https://tg-6e22da4d-d8bd-479a-9705-85af88dd8a0e.tg-2635877100.i.tgcloud.io"
     TIGERGRAPH_GRAPH_NAME: str = "FraudGraph"
-    TIGERGRAPH_USERNAME: str = "tigergraph"
-    TIGERGRAPH_PASSWORD: str = "tigergraph"
+    TIGERGRAPH_SECRET: Optional[str] = None
+    TIGERGRAPH_TOKEN: Optional[str] = None
+    TIGERGRAPH_USERNAME: Optional[str] = None
+    TIGERGRAPH_PASSWORD: Optional[str] = None
     
     # AI / LLM Configuration
     OPENAI_API_KEY: Optional[str] = None

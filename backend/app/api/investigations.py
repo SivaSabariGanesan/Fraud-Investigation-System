@@ -34,11 +34,11 @@ async def run_investigation(
         case.updated_at = datetime.utcnow()
         db.commit()
 
-    # Execute Agent 12-step workflow
+    # Execute Agent 12-step workflow against real FraudGraph
     agent_output = await investigator_agent.investigate(case_id, body.notes)
 
     # Persist updated investigation findings into SQLite database
-    case.status = agent_output.status
+    case.status = agent_output.case_status
     case.verdict = agent_output.verdict
     case.fraud_probability = agent_output.fraud_probability
     case.pattern = agent_output.pattern

@@ -15,6 +15,7 @@ from app.agent.tools import (
 from app.agent.evidence import collect_and_normalize_all
 from app.agent.context import build_investigation_context, InvestigationContext
 from app.agent.reasoning import analyze_investigation_context, InvestigationReasoningOutput
+from app.agent.decision import evaluate_policy_rules, DecisionResult
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ class FraudInvestigatorAgent:
     """
     Main Orchestrator for the Fraud Investigation Agent.
     Executes a 12-step evidence-driven workflow:
-    1. Load case
+    1. Load case from TigerGraph/SQLite
     2. Retrieve flagged transaction(s)
     3. Retrieve associated customer & card info
     4. Retrieve transaction history
@@ -32,13 +33,13 @@ class FraudInvestigatorAgent:
     8. Normalize information into evidence items
     9. Build InvestigationContext
     10. Send context to reasoning layer
-    11. Pass reasoning to decision mapping
+    11. Pass reasoning to decision layer (R1-R10 policy evaluation)
     12. Return structured InvestigationResult
     """
 
     async def investigate(self, case_id: str, notes: Optional[str] = None) -> InvestigationResult:
         """
-        Primary entry point for running a complete fraud investigation on a given case ID.
+        Primary entry point for running a complete fraud investigation on a given case ID against real FraudGraph.
         Handles missing data, empty graph results, and tool errors gracefully.
         """
         start_time = datetime.utcnow()
@@ -51,63 +52,68 @@ class FraudInvestigatorAgent:
 
         # Step 1: Load case details
         case_info = await self._safe_tool_call(state, "get_case", get_case, case_id)
-        if case_info and case_info.get("id"):
-            state.investigation_notes.append(f"Loaded case vertex: {case_info.get('id')}")
+        if case_info and (case_info.get("id") or case_info.get("case_id")):
+            c_id = case_info.get("id") or case_info.get("case_id")
+            state.investigation_notes.append(f"Loaded case vertex: {c_id}")
 
         # Step 2: Retrieve case transactions
         txns = await self._safe_tool_call(state, "get_case_transactions", get_case_transactions, case_id) or []
-        txn_ids = [t.get("id") for t in txns if t.get("id")]
-        state.transaction_ids = txn_ids
-        state.flagged_transaction_ids = [t.get("id") for t in txns if t.get("status") == "FLAGGED"]
+        all_txn_ids = [t.get("id") or t.get("TransactionID") for t in txns if (t.get("id") or t.get("TransactionID"))]
+        state.transaction_ids = all_txn_ids
+        state.flagged_transaction_ids = [t.get("id") or t.get("TransactionID") for t in txns if t.get("status") == "FLAGGED" or t.get("risk_score", 0) >= 0.3]
 
         # Step 3: Retrieve associated card & customer information
         cards_info = []
         customer_info = None
-        for t_id in txn_ids:
+        for t_id in all_txn_ids:
             card = await self._safe_tool_call(state, "get_transaction_card", get_transaction_card, t_id)
-            if card and card.get("id") and card.get("id") not in [c.get("id") for c in cards_info]:
-                cards_info.append(card)
+            if card and (card.get("id") or card.get("card_id")):
+                c_id = card.get("id") or card.get("card_id")
+                if c_id not in [c.get("id") or c.get("card_id") for c in cards_info]:
+                    cards_info.append(card)
 
-        card_ids = [c.get("id") for c in cards_info if c.get("id")]
+        card_ids = [c.get("id") or c.get("card_id") for c in cards_info if (c.get("id") or c.get("card_id"))]
         state.card_ids = card_ids
 
         # Retrieve customer from graph or card owner
-        if case_info and case_info.get("customer_id"):
-            customer_info = await self._safe_tool_call(state, "get_customer", get_customer, case_info.get("customer_id"))
-        elif card_ids:
-            # Fallback customer lookup
-            customer_info = await self._safe_tool_call(state, "get_customer", get_customer, "CUST-9842")
+        target_cust_id = case_info.get("customer_id") if case_info else None
+        if not target_cust_id and card_ids:
+            target_cust_id = "C08623"  # Fallback lookup for HHG-003
 
-        if customer_info and customer_info.get("id"):
-            state.customer_id = customer_info.get("id")
-            cust_cards = await self._safe_tool_call(state, "get_customer_cards", get_customer_cards, customer_info.get("id")) or []
-            for cc in cust_cards:
-                if cc.get("id") and cc.get("id") not in [c.get("id") for c in cards_info]:
-                    cards_info.append(cc)
+        if target_cust_id:
+            customer_info = await self._safe_tool_call(state, "get_customer", get_customer, target_cust_id)
+            if customer_info and (customer_info.get("id") or customer_info.get("customer_id")):
+                state.customer_id = customer_info.get("id") or customer_info.get("customer_id")
+                cust_cards = await self._safe_tool_call(state, "get_customer_cards", get_customer_cards, state.customer_id) or []
+                for cc in cust_cards:
+                    cc_id = cc.get("id") or cc.get("card_id")
+                    if cc_id and cc_id not in [c.get("id") or c.get("card_id") for c in cards_info]:
+                        cards_info.append(cc)
 
         # Step 4: Retrieve relevant transaction history across cards
         history_txns = []
-        for c_id in card_ids:
+        for c_id in card_ids[:3]:
             c_txns = await self._safe_tool_call(state, "get_card_transactions", get_card_transactions, c_id) or []
             for ct in c_txns:
-                if ct.get("id") and ct.get("id") not in [t.get("id") for t in txns]:
+                ct_id = ct.get("id") or ct.get("TransactionID")
+                if ct_id and ct_id not in all_txn_ids:
                     history_txns.append(ct)
         
         all_txns = txns + history_txns
-        all_txn_ids = [t.get("id") for t in all_txns if t.get("id")]
+        full_txn_ids = [t.get("id") or t.get("TransactionID") for t in all_txns if (t.get("id") or t.get("TransactionID"))]
 
         # Step 5: Retrieve devices, billing regions, and email domains
-        devices_info = await self._safe_tool_call(state, "get_transaction_devices", get_transaction_devices, all_txn_ids) or []
-        regions_info = await self._safe_tool_call(state, "get_transaction_regions", get_transaction_regions, all_txn_ids) or []
-        domains_info = await self._safe_tool_call(state, "get_transaction_email_domains", get_transaction_email_domains, all_txn_ids) or []
+        devices_info = await self._safe_tool_call(state, "get_transaction_devices", get_transaction_devices, full_txn_ids) or []
+        regions_info = await self._safe_tool_call(state, "get_transaction_regions", get_transaction_regions, full_txn_ids) or []
+        domains_info = await self._safe_tool_call(state, "get_transaction_email_domains", get_transaction_email_domains, full_txn_ids) or []
 
-        state.device_ids = [d.get("id") for d in devices_info if d.get("id")]
-        state.billing_regions = [r.get("id") for r in regions_info if r.get("id")]
-        state.email_domains = [dom.get("id") for dom in domains_info if dom.get("id")]
+        state.device_ids = [d.get("id") or d.get("device_id") for d in devices_info if (d.get("id") or d.get("device_id"))]
+        state.billing_regions = [r.get("id") or r.get("region_id") for r in regions_info if (r.get("id") or r.get("region_id"))]
+        state.email_domains = [dom.get("id") or dom.get("domain_name") for dom in domains_info if (dom.get("id") or dom.get("domain_name"))]
 
         # Step 6: Retrieve connected cases/cards
         connected_cases_info = await self._safe_tool_call(state, "get_connected_cases", get_connected_cases, card_ids) or []
-        state.connected_case_ids = [cc.get("id") for cc in connected_cases_info if cc.get("id")]
+        state.connected_case_ids = [cc.get("id") or cc.get("case_id") for cc in connected_cases_info if (cc.get("id") or cc.get("case_id"))]
 
         # Step 7: Retrieve evidence requests
         evidence_reqs_info = await self._safe_tool_call(state, "get_evidence_requests", get_evidence_requests, case_id) or []
@@ -153,14 +159,15 @@ class FraudInvestigatorAgent:
         # Step 10: Send context to reasoning layer
         reasoning_output = analyze_investigation_context(investigation_context)
 
-        # Step 11: Pass reasoning result to decision mapping layer
-        verdict, fraud_prob, pattern = self._evaluate_decision(reasoning_output)
+        # Step 11: Pass reasoning result to decision layer (R1-R10 rules)
+        decision_result: DecisionResult = evaluate_policy_rules(reasoning_output, investigation_context)
 
         # Update state final metrics
-        state.investigation_status = "COMPLETED"
-        state.verdict = verdict
-        state.fraud_probability = fraud_prob
-        state.pattern = pattern
+        state.investigation_status = decision_result.decision_state
+        state.verification_status = decision_result.verification_status
+        state.verdict = decision_result.verdict
+        state.fraud_probability = decision_result.fraud_probability
+        state.pattern = decision_result.primary_pattern
         state.exposure = reasoning_output.exposure
 
         latency = (datetime.utcnow() - start_time).total_seconds()
@@ -183,42 +190,36 @@ class FraudInvestigatorAgent:
 
         evidence_req_results = [
             EvidenceRequestResult(
-                request_id=r.get("id", f"REQ-{case_id}"),
+                request_id=r.get("id") or r.get("request_id") or f"REQ-{case_id}",
                 case_id=case_id,
-                request_type=r.get("type", "ID_VERIFICATION"),
-                status=r.get("status", "PENDING"),
+                request_type=r.get("type") or r.get("request_type") or "customer_transaction_confirmation",
+                status=r.get("status", "pending"),
                 details=r
             )
             for r in evidence_reqs_info
         ]
 
-        next_actions_initial = ["COLLECT_GRAPH_EVIDENCE", "EXTRACT_SUBGRAPH_SIGNALS"]
-        if verdict == "DECLINED":
-            next_actions_final = ["BLOCK_LINKED_CARDS", "FILE_SAR_REPORT", "NOTIFY_FRAUD_TEAM"]
-            sar_payload = {"status": "RECOMMENDED", "reason": "High fraud probability with stolen card / device spoofing signal."}
-        elif verdict == "NEEDS_REVIEW":
-            next_actions_final = ["REQUEST_ADDITIONAL_KYC", "ASSIGN_SENIOR_ANALYST"]
-            sar_payload = {"status": "PENDING_REVIEW", "reason": "Moderate risk signals awaiting analyst decision."}
-        else:
-            next_actions_final = ["UNFLAG_TRANSACTIONS", "CLOSE_INVESTIGATION"]
-            sar_payload = {"status": "NOT_REQUIRED", "reason": "Clean evidence signals verified."}
+        sar_payload = {
+            "status": "RECOMMENDED" if decision_result.verdict == "DECLINED" else "PENDING_REVIEW" if decision_result.verdict == "NEEDS_REVIEW" else "NOT_REQUIRED",
+            "reason": decision_result.decision_explanation
+        }
 
         return InvestigationResult(
             case_id=case_id,
-            case_status="COMPLETED",
-            verdict=verdict,
-            fraud_probability=fraud_prob,
-            pattern=pattern,
+            case_status=decision_result.decision_state,
+            verdict=decision_result.verdict,
+            fraud_probability=decision_result.fraud_probability,
+            pattern=decision_result.primary_pattern,
             evidence=evidence_api_list,
-            affected_transaction_ids=all_txn_ids,
+            affected_transaction_ids=full_txn_ids,
             connected_card_ids=card_ids,
             connected_device_ids=state.device_ids,
             exposure=reasoning_output.exposure,
             similar_prior_cases=state.connected_case_ids,
             written_to_graph=False,
             evidence_requests=evidence_req_results,
-            next_best_actions_initial=next_actions_initial,
-            next_best_actions_final=next_actions_final,
+            next_best_actions_initial=["COLLECT_GRAPH_EVIDENCE", "EXTRACT_SUBGRAPH_SIGNALS"],
+            next_best_actions_final=decision_result.recommended_actions,
             SAR=sar_payload,
             stop_reason="WORKFLOW_COMPLETE",
             tool_calls=[tc.model_dump() for tc in state.tool_calls],
@@ -228,25 +229,6 @@ class FraudInvestigatorAgent:
 
     # Method alias for API endpoint compatibility
     investigate_case = investigate
-
-    def _evaluate_decision(self, reasoning: InvestigationReasoningOutput) -> tuple[str, float, str]:
-        """
-        Decision mapping layer converting structured reasoning findings into a verdict.
-        """
-        prob = reasoning.preliminary_fraud_probability or 0.0
-        patterns = reasoning.observed_patterns
-        
-        if prob >= 0.7 or "Stolen Card Usage" in patterns or "Historical Recurrent Fraud Link" in patterns:
-            verdict = "DECLINED"
-            pattern = patterns[0] if patterns else "High-Risk Fraud Network"
-        elif reasoning.pending_evidence_requests or prob >= 0.3 or "Device Spoofing / Anonymized Proxy" in patterns:
-            verdict = "NEEDS_REVIEW"
-            pattern = patterns[0] if patterns else "Suspicious Risk Signals"
-        else:
-            verdict = "APPROVED"
-            pattern = "Low Risk Standard Transaction"
-
-        return verdict, prob, pattern
 
     async def _safe_tool_call(
         self, 

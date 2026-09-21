@@ -4,7 +4,7 @@ from datetime import datetime
 
 class InvestigationRequest(BaseModel):
     """Input payload to request a case investigation."""
-    case_id: str
+    case_id: Optional[str] = None
     notes: Optional[str] = None
     force_reinvestigate: bool = False
     metadata: Dict[str, Any] = Field(default_factory=dict)
@@ -21,6 +21,19 @@ class EvidenceItem(BaseModel):
     strength: Optional[str] = "NEUTRAL"
     raw_data: Dict[str, Any] = Field(default_factory=dict)
     timestamp: Optional[datetime] = None
+    # Compatibility aliases for API/Frontend
+    id: Optional[str] = None
+    type: Optional[str] = None
+    details: Dict[str, Any] = Field(default_factory=dict)
+    risk_signal: Optional[str] = None
+
+    def model_post_init(self, __context: Any) -> None:
+        if not self.id:
+            self.id = self.evidence_id
+        if not self.type:
+            self.type = self.evidence_type
+        if not self.details:
+            self.details = self.raw_data or {"description": self.description}
 
 class InvestigationContext(BaseModel):
     """Unified context object passed to reasoning layer."""
@@ -75,6 +88,7 @@ class InvestigationResult(BaseModel):
     """
     case_id: str
     case_status: str = "COMPLETED"
+    status: str = "COMPLETED"
     verdict: Optional[str] = None  # APPROVED, DECLINED, NEEDS_REVIEW
     fraud_probability: Optional[float] = Field(default=None, ge=0.0, le=1.0)
     pattern: Optional[str] = None
@@ -93,6 +107,19 @@ class InvestigationResult(BaseModel):
     tool_calls: List[Dict[str, Any]] = Field(default_factory=list)
     tokens: Dict[str, int] = Field(default_factory=lambda: {"prompt": 0, "completion": 0, "total": 0})
     latency: float = 0.0
+    # API / Frontend compatibility
+    evidence_count: int = 0
+    reasoning_summary: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    def model_post_init(self, __context: Any) -> None:
+        if not self.evidence_count:
+            self.evidence_count = len(self.evidence)
+        if not self.created_at:
+            self.created_at = datetime.utcnow()
+        if not self.updated_at:
+            self.updated_at = datetime.utcnow()
 
 # Aliases for backward compatibility
 AgentEvidenceItem = EvidenceItem

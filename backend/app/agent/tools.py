@@ -1,18 +1,19 @@
 import logging
+import asyncio
 from typing import Dict, Any, List, Optional
-from app.services.tigergraph import tigergraph_service
+from app.services.tigergraph import tigergraph_service, TigerGraphConnectionError
 
 logger = logging.getLogger(__name__)
 
 def is_valid_transaction(txn: Optional[Dict[str, Any]]) -> bool:
     """
     Validates if a transaction vertex is properly formed.
-    Filters out malformed historical transactions (missing ID, non-positive or null amount, corrupted status).
+    Filters out malformed historical transactions (missing ID, non-positive or null amount).
     """
     if not txn or not isinstance(txn, dict):
         return False
 
-    txn_id = txn.get("id") or txn.get("transaction_id")
+    txn_id = txn.get("id") or txn.get("TransactionID") or txn.get("transaction_id")
     if not txn_id:
         return False
 
@@ -21,27 +22,28 @@ def is_valid_transaction(txn: Optional[Dict[str, Any]]) -> bool:
         return False
 
     status = txn.get("status")
-    if status == "CORRUPTED" or status is None:
+    if status == "CORRUPTED":
         return False
 
     return True
 
 async def get_case(case_id: str) -> Optional[Dict[str, Any]]:
     """
-    1. Retrieve details for a single investigation case by ID.
+    1. Retrieve details for a single investigation case by ID from real FraudGraph.
     """
     if not case_id:
         return None
-    
-    case_data = await tigergraph_service.get_vertex("ClosedCase", case_id)
-    if case_data:
-        return case_data
-    
-    # Fallback to sub-graph lookup if live RESTPP vertex endpoint is unconfigured
-    graph = await tigergraph_service.fetch_case_subgraph(case_id)
-    cases = graph.get("entities", {}).get("ClosedCase", [])
+
+    # Check vertex directly
+    case_v = await tigergraph_service.get_vertex("ClosedCase", case_id)
+    if case_v:
+        return case_v
+
+    # Fallback to case subgraph execution
+    subgraph = await tigergraph_service.fetch_case_subgraph(case_id)
+    cases = subgraph.get("entities", {}).get("ClosedCase", [])
     for c in cases:
-        if c.get("id") == case_id:
+        if c.get("id") == case_id or c.get("case_id") == case_id:
             return c
     return None
 
@@ -53,28 +55,15 @@ async def get_case_transactions(case_id: str) -> List[Dict[str, Any]]:
     if not case_id:
         return []
 
-    graph = await tigergraph_service.fetch_case_subgraph(case_id)
-    entities = graph.get("entities", {}).get("Transaction", [])
-    relationships = graph.get("relationships", [])
-
-    # Find transaction IDs connected to case_id via INVOLVES
-    linked_txn_ids = {
-        rel["to"] for rel in relationships 
-        if rel.get("from") == case_id and rel.get("rel") == "INVOLVES"
-    }
-
-    valid_txns = []
-    for txn in entities:
-        txn_id = txn.get("id")
-        if (not linked_txn_ids or txn_id in linked_txn_ids) and is_valid_transaction(txn):
-            valid_txns.append(txn)
-
-    return valid_txns
+    subgraph = await tigergraph_service.fetch_case_subgraph(case_id)
+    txns = subgraph.get("entities", {}).get("Transaction", [])
+    
+    # Filter valid positive transactions
+    return [t for t in txns if is_valid_transaction(t)]
 
 async def get_transaction(transaction_id: str) -> Optional[Dict[str, Any]]:
     """
-    3. Retrieve details for a single transaction by ID.
-    Filters out malformed transactions.
+    3. Retrieve details for a single transaction by ID from real FraudGraph.
     """
     if not transaction_id:
         return None
@@ -83,61 +72,33 @@ async def get_transaction(transaction_id: str) -> Optional[Dict[str, Any]]:
     if txn and is_valid_transaction(txn):
         return txn
 
-    # Fallback graph search
-    case_id = transaction_id.split("-")[1] if "-" in transaction_id else transaction_id
-    graph = await tigergraph_service.fetch_case_subgraph(case_id)
-    txns = graph.get("entities", {}).get("Transaction", [])
-    for t in txns:
-        if t.get("id") == transaction_id and is_valid_transaction(t):
-            return t
-
     return None
 
 async def get_transaction_card(transaction_id: str) -> Optional[Dict[str, Any]]:
     """
-    4. Retrieve the card associated with a transaction (Card -> MADE -> Transaction).
+    4. Retrieve card associated with a transaction (Transaction -> MADE -> Card).
     """
     if not transaction_id:
         return None
 
-    case_id = transaction_id.split("-")[1] if "-" in transaction_id else transaction_id
-    graph = await tigergraph_service.fetch_case_subgraph(case_id)
-    relationships = graph.get("relationships", [])
-    cards = graph.get("entities", {}).get("Card", [])
+    edges = await tigergraph_service.get_edges("Transaction", transaction_id, "MADE")
+    for edge in edges:
+        card_id = edge.get("to_id")
+        if card_id:
+            card_v = await tigergraph_service.get_vertex("Card", card_id)
+            if card_v:
+                return card_v
 
-    # Find card that MADE this transaction
-    card_id = None
-    for rel in relationships:
-        if rel.get("to") == transaction_id and rel.get("rel") == "MADE":
-            card_id = rel.get("from")
-            break
-
-    if card_id:
-        for card in cards:
-            if card.get("id") == card_id:
-                return card
-
-    # Fallback to first available card if relationships not explicitly present
-    return cards[0] if cards else None
+    return None
 
 async def get_customer(customer_id: str) -> Optional[Dict[str, Any]]:
     """
-    5. Retrieve customer details by customer ID.
+    5. Retrieve customer details by customer ID from real FraudGraph.
     """
     if not customer_id:
         return None
 
-    cust = await tigergraph_service.get_vertex("Customer", customer_id)
-    if cust:
-        return cust
-
-    # Fallback graph search
-    graph = await tigergraph_service.fetch_case_subgraph(customer_id)
-    customers = graph.get("entities", {}).get("Customer", [])
-    for c in customers:
-        if c.get("id") == customer_id:
-            return c
-    return customers[0] if customers else None
+    return await tigergraph_service.get_vertex("Customer", customer_id)
 
 async def get_customer_cards(customer_id: str) -> List[Dict[str, Any]]:
     """
@@ -146,42 +107,46 @@ async def get_customer_cards(customer_id: str) -> List[Dict[str, Any]]:
     if not customer_id:
         return []
 
-    graph = await tigergraph_service.fetch_case_subgraph(customer_id)
-    relationships = graph.get("relationships", [])
-    cards = graph.get("entities", {}).get("Card", [])
+    edges = await tigergraph_service.get_edges("Customer", customer_id, "OWNS")
+    if not edges:
+        return []
 
-    owned_card_ids = {
-        rel["to"] for rel in relationships 
-        if rel.get("from") == customer_id and rel.get("rel") == "OWNS"
-    }
+    async def _fetch_card(c_id: str):
+        return await tigergraph_service.get_vertex("Card", c_id)
 
-    if owned_card_ids:
-        return [c for c in cards if c.get("id") in owned_card_ids]
+    card_ids = [e.get("to_id") for e in edges if e.get("to_id")]
+    results = await asyncio.gather(*[_fetch_card(cid) for cid in card_ids], return_exceptions=True)
+    
+    cards = []
+    for r in results:
+        if isinstance(r, dict) and r.get("id"):
+            cards.append(r)
     return cards
 
-async def get_card_transactions(card_id: str) -> List[Dict[str, Any]]:
+async def get_card_transactions(card_id: str, limit: int = 10) -> List[Dict[str, Any]]:
     """
-    7. Retrieve transactions made using a specific card (Card -> MADE -> Transaction).
-    Filters out malformed transactions.
+    7. Retrieve transactions made using a specific card (Card -> reverse_MADE -> Transaction).
+    Filters out malformed transactions. Parallelizes fetches up to limit.
     """
     if not card_id:
         return []
 
-    graph = await tigergraph_service.fetch_case_subgraph(card_id)
-    relationships = graph.get("relationships", [])
-    txns = graph.get("entities", {}).get("Transaction", [])
+    edges = await tigergraph_service.get_edges("Card", card_id, "reverse_MADE")
+    if not edges:
+        return []
 
-    made_txn_ids = {
-        rel["to"] for rel in relationships 
-        if rel.get("from") == card_id and rel.get("rel") == "MADE"
-    }
+    txn_ids = [e.get("to_id") for e in edges if e.get("to_id")][:limit]
 
-    matched_txns = []
-    for t in txns:
-        if (not made_txn_ids or t.get("id") in made_txn_ids) and is_valid_transaction(t):
-            matched_txns.append(t)
+    async def _fetch_txn(t_id: str):
+        return await tigergraph_service.get_vertex("Transaction", t_id)
 
-    return matched_txns
+    results = await asyncio.gather(*[_fetch_txn(tid) for tid in txn_ids], return_exceptions=True)
+    
+    txns = []
+    for r in results:
+        if isinstance(r, dict) and is_valid_transaction(r):
+            txns.append(r)
+    return txns
 
 async def get_transaction_devices(transaction_ids: List[str]) -> List[Dict[str, Any]]:
     """
@@ -190,25 +155,28 @@ async def get_transaction_devices(transaction_ids: List[str]) -> List[Dict[str, 
     if not transaction_ids:
         return []
 
+    async def _fetch_devs_for_txn(t_id: str):
+        edges = await tigergraph_service.get_edges("Transaction", t_id, "FROM_DEVICE")
+        devs = []
+        for e in edges:
+            d_id = e.get("to_id")
+            if d_id:
+                dv = await tigergraph_service.get_vertex("DeviceProfile", d_id)
+                if dv:
+                    devs.append(dv)
+        return devs
+
+    results = await asyncio.gather(*[_fetch_devs_for_txn(tid) for tid in transaction_ids], return_exceptions=True)
+    
     devices = []
     seen_ids = set()
-
-    for txn_id in transaction_ids:
-        case_id = txn_id.split("-")[1] if "-" in txn_id else txn_id
-        graph = await tigergraph_service.fetch_case_subgraph(case_id)
-        relationships = graph.get("relationships", [])
-        dev_entities = graph.get("entities", {}).get("DeviceProfile", [])
-
-        target_dev_ids = {
-            rel["to"] for rel in relationships 
-            if rel.get("from") == txn_id and rel.get("rel") == "FROM_DEVICE"
-        }
-
-        for d in dev_entities:
-            d_id = d.get("id")
-            if (not target_dev_ids or d_id in target_dev_ids) and d_id not in seen_ids:
-                seen_ids.add(d_id)
-                devices.append(d)
+    for res in results:
+        if isinstance(res, list):
+            for dev in res:
+                d_id = dev.get("id")
+                if d_id and d_id not in seen_ids:
+                    seen_ids.add(d_id)
+                    devices.append(dev)
 
     return devices
 
@@ -219,25 +187,30 @@ async def get_transaction_regions(transaction_ids: List[str]) -> List[Dict[str, 
     if not transaction_ids:
         return []
 
+    async def _fetch_regions_for_txn(t_id: str):
+        edges = await tigergraph_service.get_edges("Transaction", t_id, "BILLED_IN")
+        regs = []
+        for e in edges:
+            r_id = e.get("to_id")
+            if r_id:
+                rv = await tigergraph_service.get_vertex("BillingRegion", r_id)
+                if rv:
+                    regs.append(rv)
+                else:
+                    regs.append({"id": r_id, "region_id": r_id})
+        return regs
+
+    results = await asyncio.gather(*[_fetch_regions_for_txn(tid) for tid in transaction_ids], return_exceptions=True)
+    
     regions = []
     seen_ids = set()
-
-    for txn_id in transaction_ids:
-        case_id = txn_id.split("-")[1] if "-" in txn_id else txn_id
-        graph = await tigergraph_service.fetch_case_subgraph(case_id)
-        relationships = graph.get("relationships", [])
-        region_entities = graph.get("entities", {}).get("BillingRegion", [])
-
-        target_region_ids = {
-            rel["to"] for rel in relationships 
-            if rel.get("from") == txn_id and rel.get("rel") == "BILLED_IN"
-        }
-
-        for r in region_entities:
-            r_id = r.get("id")
-            if (not target_region_ids or r_id in target_region_ids) and r_id not in seen_ids:
-                seen_ids.add(r_id)
-                regions.append(r)
+    for res in results:
+        if isinstance(res, list):
+            for reg in res:
+                r_id = reg.get("id")
+                if r_id and r_id not in seen_ids:
+                    seen_ids.add(r_id)
+                    regions.append(reg)
 
     return regions
 
@@ -248,25 +221,30 @@ async def get_transaction_email_domains(transaction_ids: List[str]) -> List[Dict
     if not transaction_ids:
         return []
 
+    async def _fetch_domains_for_txn(t_id: str):
+        edges = await tigergraph_service.get_edges("Transaction", t_id, "PURCHASER_EMAIL")
+        doms = []
+        for e in edges:
+            d_id = e.get("to_id")
+            if d_id:
+                dv = await tigergraph_service.get_vertex("EmailDomain", d_id)
+                if dv:
+                    doms.append(dv)
+                else:
+                    doms.append({"id": d_id, "domain_name": d_id})
+        return doms
+
+    results = await asyncio.gather(*[_fetch_domains_for_txn(tid) for tid in transaction_ids], return_exceptions=True)
+    
     domains = []
     seen_ids = set()
-
-    for txn_id in transaction_ids:
-        case_id = txn_id.split("-")[1] if "-" in txn_id else txn_id
-        graph = await tigergraph_service.fetch_case_subgraph(case_id)
-        relationships = graph.get("relationships", [])
-        domain_entities = graph.get("entities", {}).get("EmailDomain", [])
-
-        target_domain_ids = {
-            rel["to"] for rel in relationships 
-            if rel.get("from") == txn_id and rel.get("rel") == "PURCHASER_EMAIL"
-        }
-
-        for dom in domain_entities:
-            dom_id = dom.get("id")
-            if (not target_domain_ids or dom_id in target_domain_ids) and dom_id not in seen_ids:
-                seen_ids.add(dom_id)
-                domains.append(dom)
+    for res in results:
+        if isinstance(res, list):
+            for dom in res:
+                d_id = dom.get("id")
+                if d_id and d_id not in seen_ids:
+                    seen_ids.add(d_id)
+                    domains.append(dom)
 
     return domains
 
@@ -277,55 +255,59 @@ async def get_connected_cases(card_ids: List[str]) -> List[Dict[str, Any]]:
     if not card_ids:
         return []
 
+    async def _fetch_cases_for_card(c_id: str):
+        edges = await tigergraph_service.get_edges("Card", c_id, "reverse_CONNECTED_TO")
+        cases = []
+        for e in edges:
+            cs_id = e.get("to_id")
+            if cs_id:
+                csv = await tigergraph_service.get_vertex("ClosedCase", cs_id)
+                if csv:
+                    cases.append(csv)
+        return cases
+
+    results = await asyncio.gather(*[_fetch_cases_for_card(cid) for cid in card_ids], return_exceptions=True)
+    
     connected_cases = []
     seen_ids = set()
-
-    for card_id in card_ids:
-        graph = await tigergraph_service.fetch_case_subgraph(card_id)
-        relationships = graph.get("relationships", [])
-        cases = graph.get("entities", {}).get("ClosedCase", [])
-
-        target_case_ids = {
-            rel["from"] for rel in relationships 
-            if rel.get("to") == card_id and rel.get("rel") == "CONNECTED_TO"
-        }
-
-        for c in cases:
-            c_id = c.get("id")
-            if (not target_case_ids or c_id in target_case_ids) and c_id not in seen_ids:
-                seen_ids.add(c_id)
-                connected_cases.append(c)
+    for res in results:
+        if isinstance(res, list):
+            for cs in res:
+                cs_id = cs.get("id")
+                if cs_id and cs_id not in seen_ids:
+                    seen_ids.add(cs_id)
+                    connected_cases.append(cs)
 
     return connected_cases
 
 async def get_evidence_requests(case_id: str) -> List[Dict[str, Any]]:
     """
-    12. Retrieve evidence requests submitted for a case (EvidenceRequest -> FOR_CASE -> ClosedCase).
+    12. Retrieve evidence requests submitted for a case.
     """
     if not case_id:
         return []
 
-    graph = await tigergraph_service.fetch_case_subgraph(case_id)
-    relationships = graph.get("relationships", [])
-    evidence_reqs = graph.get("entities", {}).get("EvidenceRequest", [])
+    subgraph = await tigergraph_service.fetch_case_subgraph(case_id)
+    evidence_reqs = subgraph.get("entities", {}).get("EvidenceRequest", [])
+    if evidence_reqs:
+        return evidence_reqs
 
-    target_req_ids = {
-        rel["from"] for rel in relationships 
-        if rel.get("to") == case_id and rel.get("rel") == "FOR_CASE"
-    }
+    # Edge lookup fallback
+    edges = await tigergraph_service.get_edges("ClosedCase", case_id, "reverse_FOR_CASE")
+    reqs = []
+    for edge in edges:
+        req_id = edge.get("to_id")
+        if req_id:
+            req_v = await tigergraph_service.get_vertex("EvidenceRequest", req_id)
+            if req_v:
+                reqs.append(req_v)
 
-    matched_reqs = []
-    for req in evidence_reqs:
-        req_id = req.get("id")
-        if (not target_req_ids or req_id in target_req_ids) or req.get("case_id") == case_id:
-            matched_reqs.append(req)
-
-    return matched_reqs
+    return reqs
 
 
 class TigerGraphInvestigatorTools:
     """
-    Wrapper class providing access to all 12 TigerGraph investigation tools.
+    Wrapper class providing access to all 12 real TigerGraph investigation tools.
     """
 
     get_case = staticmethod(get_case)
