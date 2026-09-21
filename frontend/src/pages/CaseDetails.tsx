@@ -95,6 +95,7 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
       (e.description && e.description.toLowerCase().includes('customer'))
   );
   const customerId =
+    investigation?.customer_id ||
     caseData?.customer_id ||
     customerEv?.raw_data?.customer_id ||
     customerEv?.details?.customer_id ||
@@ -353,7 +354,15 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
               const channel = raw.channel || 'N/A';
               const productCode = raw.product_code || 'N/A';
               const riskSignal = t.risk_signal ?? raw.risk_score ?? raw.risk_signal ?? null;
-              const timestamp = t.timestamp || raw.timestamp || caseData?.created_at;
+              const rawTs = t.timestamp || raw.ts || raw.timestamp || raw.created_at;
+              let formattedTxnTimestamp = 'Not available';
+              if (rawTs !== null && rawTs !== undefined) {
+                if (typeof rawTs === 'number' || (typeof rawTs === 'string' && !isNaN(Number(rawTs)) && Number(rawTs) > 100000000)) {
+                  formattedTxnTimestamp = formatDate(new Date(Number(rawTs) * (Number(rawTs) < 10000000000 ? 1000 : 1)).toISOString());
+                } else if (typeof rawTs === 'string' && rawTs.trim() !== '' && rawTs !== 'N/A') {
+                  formattedTxnTimestamp = formatDate(rawTs);
+                }
+              }
 
               return (
                 <div key={idx} className="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-3">
@@ -389,7 +398,7 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
 
                     <div>
                       <span className="text-slate-400 uppercase font-mono block">Timestamp</span>
-                      <span className="font-mono text-slate-300 mt-0.5 block">{formatDate(timestamp)}</span>
+                      <span className="font-mono text-slate-300 mt-0.5 block">{formattedTxnTimestamp}</span>
                     </div>
                   </div>
                 </div>

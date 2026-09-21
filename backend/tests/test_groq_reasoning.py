@@ -23,7 +23,8 @@ async def test_hhg003_real_groq_reasoning():
     """Verify HHG-003 produces real Groq reasoning with usage metrics, correct pending status, and no risk_score conversion."""
     res = await investigate("HHG-003")
     assert res.case_id == "HHG-003"
-    assert res.case_status == "UNRESOLVED"
+    assert res.case_status == "UNDER_INVESTIGATION"
+    assert res.status == "VERIFICATION_PENDING"
     assert res.verdict == "NEEDS_REVIEW"
     # CRITICAL: risk_score (0.40) must NOT be converted into fraud_probability
     assert res.fraud_probability is None

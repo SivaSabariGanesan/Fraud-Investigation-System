@@ -38,6 +38,7 @@ class EvidenceItem(BaseModel):
 class InvestigationContext(BaseModel):
     """Unified context object passed to reasoning layer."""
     case_id: str
+    customer_id: Optional[str] = None
     generated_at: datetime = Field(default_factory=datetime.utcnow)
     observed_facts: Dict[str, Any] = Field(default_factory=dict)
     derived_observations: Dict[str, Any] = Field(default_factory=dict)
@@ -75,8 +76,9 @@ class EvidenceRequestResult(BaseModel):
 class DecisionResult(BaseModel):
     """Output from decision and policy evaluation layer."""
     case_id: str
+    customer_id: Optional[str] = None
     verdict: str  # APPROVED, DECLINED, NEEDS_REVIEW
-    fraud_probability: float = Field(ge=0.0, le=1.0)
+    fraud_probability: Optional[float] = Field(default=None, ge=0.0, le=1.0)
     primary_pattern: str
     policies_evaluated: List[Dict[str, Any]] = Field(default_factory=list)
     recommended_actions: List[str] = Field(default_factory=list)
@@ -87,6 +89,7 @@ class InvestigationResult(BaseModel):
     Contains full investigation findings, verdict, graph tracking, SAR, actions, and performance metrics.
     """
     case_id: str
+    customer_id: Optional[str] = None
     case_status: str = "COMPLETED"
     status: str = "COMPLETED"
     verdict: Optional[str] = None  # APPROVED, DECLINED, NEEDS_REVIEW

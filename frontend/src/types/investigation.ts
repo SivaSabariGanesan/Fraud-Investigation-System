@@ -74,6 +74,7 @@ export interface ReasoningResult {
 
 export interface InvestigationResult {
   case_id: string;
+  customer_id?: string | null;
   case_status: CaseStatus;
   status: CaseStatus;
   verdict: Verdict;

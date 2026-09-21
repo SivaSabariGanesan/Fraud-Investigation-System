@@ -12,6 +12,7 @@ from app.agent.tools import (
     get_transaction_devices, get_transaction_regions, get_transaction_email_domains,
     get_connected_cases, get_evidence_requests
 )
+from app.services.tigergraph import tigergraph_service
 from app.agent.evidence import collect_and_normalize_all
 from app.agent.context import build_investigation_context, InvestigationContext
 from app.agent.reasoning import analyze_investigation_context, InvestigationReasoningOutput
@@ -75,8 +76,28 @@ class FraudInvestigatorAgent:
         card_ids = [c.get("id") or c.get("card_id") for c in cards_info if (c.get("id") or c.get("card_id"))]
         state.card_ids = card_ids
 
-        # Retrieve customer from graph or card owner
+        # Retrieve subgraph entities first for quick entity resolution
+        subgraph = await tigergraph_service.fetch_case_subgraph(case_id)
+
+        # Step 3: Retrieve associated card & customer information
+        cards_info = subgraph.get("entities", {}).get("Card", [])
+        for t_id in all_txn_ids:
+            card = await self._safe_tool_call(state, "get_transaction_card", get_transaction_card, t_id)
+            if card and (card.get("id") or card.get("card_id")):
+                c_id = card.get("id") or card.get("card_id")
+                if c_id not in [c.get("id") or c.get("card_id") for c in cards_info]:
+                    cards_info.append(card)
+
+        card_ids = [c.get("id") or c.get("card_id") for c in cards_info if (c.get("id") or c.get("card_id"))]
+        state.card_ids = card_ids
+
+        # Retrieve customer from case_info, subgraph, or card owner
         target_cust_id = case_info.get("customer_id") if case_info else None
+        if not target_cust_id:
+            custs_in_subgraph = subgraph.get("entities", {}).get("Customer", [])
+            if custs_in_subgraph:
+                target_cust_id = custs_in_subgraph[0].get("id") or custs_in_subgraph[0].get("customer_id")
+
         if not target_cust_id and card_ids:
             for c_id in card_ids:
                 try:
@@ -96,6 +117,9 @@ class FraudInvestigatorAgent:
                     cc_id = cc.get("id") or cc.get("card_id")
                     if cc_id and cc_id not in [c.get("id") or c.get("card_id") for c in cards_info]:
                         cards_info.append(cc)
+            else:
+                state.customer_id = target_cust_id
+                customer_info = {"id": target_cust_id, "customer_id": target_cust_id}
 
         # Step 4: Retrieve relevant transaction history across cards
         history_txns = []
@@ -124,6 +148,8 @@ class FraudInvestigatorAgent:
 
         # Step 7: Retrieve evidence requests
         evidence_reqs_info = await self._safe_tool_call(state, "get_evidence_requests", get_evidence_requests, case_id) or []
+        if not evidence_reqs_info:
+            evidence_reqs_info = subgraph.get("entities", {}).get("EvidenceRequest", [])
         state.evidence_requests = evidence_reqs_info
 
         # Step 8: Normalize retrieved information into structured evidence items
@@ -169,6 +195,11 @@ class FraudInvestigatorAgent:
         # Step 11: Pass reasoning result to decision layer (R1-R10 rules)
         decision_result: DecisionResult = evaluate_policy_rules(reasoning_output, investigation_context)
 
+        # Check for pending required evidence request
+        has_pending_ev_req = len(reasoning_output.pending_evidence_requests) > 0 or any(
+            str(r.get("status", "")).lower() in ("pending", "submitted") for r in evidence_reqs_info
+        )
+
         # Update state final metrics
         state.investigation_status = decision_result.decision_state
         state.verification_status = decision_result.verification_status
@@ -190,7 +221,8 @@ class FraudInvestigatorAgent:
                 transaction_id=e.transaction_id,
                 card_id=e.card_id,
                 strength=e.strength,
-                raw_data=e.raw_data
+                raw_data=e.raw_data,
+                timestamp=e.timestamp
             )
             for e in normalized_evidence_items
         ]
@@ -206,16 +238,37 @@ class FraudInvestigatorAgent:
             for r in evidence_reqs_info
         ]
 
+        # SAR evaluation: risk_score alone does NOT trigger SAR eligibility.
+        # Derived strictly from R1-R10 conditions and confirmed fraud verdict.
+        if decision_result.verdict == "DECLINED":
+            sar_status = "RECOMMENDED"
+            sar_reason = decision_result.decision_explanation
+        elif has_pending_ev_req:
+            sar_status = "NOT_RECOMMENDED"
+            sar_reason = "Pending customer verification request. Insufficient evidence to establish suspicious activity."
+        else:
+            sar_status = "NOT_REQUIRED"
+            sar_reason = "No confirmed fraud policy triggers met."
+
         sar_payload = {
-            "status": "RECOMMENDED" if decision_result.verdict == "DECLINED" else "PENDING_REVIEW" if decision_result.verdict == "NEEDS_REVIEW" else "NOT_REQUIRED",
-            "reason": decision_result.decision_explanation
+            "status": sar_status,
+            "reason": sar_reason
         }
+
+        # Determine stop_reason: pending evidence request produces PENDING_EVIDENCE_RESPONSE
+        stop_reason = "PENDING_EVIDENCE_RESPONSE" if has_pending_ev_req else "WORKFLOW_COMPLETE"
+
+        # Determine case status and status badge for pending evidence
+        final_case_status = "UNDER_INVESTIGATION" if has_pending_ev_req else decision_result.decision_state
+        final_status = "VERIFICATION_PENDING" if has_pending_ev_req else decision_result.decision_state
+        final_verdict = "NEEDS_REVIEW" if has_pending_ev_req and decision_result.verdict != "DECLINED" else decision_result.verdict
 
         return InvestigationResult(
             case_id=case_id,
-            case_status=decision_result.decision_state,
-            status=decision_result.decision_state,
-            verdict=decision_result.verdict,
+            customer_id=state.customer_id,
+            case_status=final_case_status,
+            status=final_status,
+            verdict=final_verdict,
             fraud_probability=decision_result.fraud_probability,
             pattern=decision_result.primary_pattern,
             evidence=evidence_api_list,
@@ -229,7 +282,7 @@ class FraudInvestigatorAgent:
             next_best_actions_initial=["COLLECT_GRAPH_EVIDENCE", "EXTRACT_SUBGRAPH_SIGNALS"],
             next_best_actions_final=decision_result.recommended_actions,
             SAR=sar_payload,
-            stop_reason="WORKFLOW_COMPLETE",
+            stop_reason=stop_reason,
             tool_calls=[tc.model_dump() for tc in state.tool_calls],
             tokens=reasoning_output.llm_tokens if reasoning_output.llm_tokens else {"prompt": 0, "completion": 0, "total": 0},
             latency=reasoning_output.llm_latency if reasoning_output.llm_latency > 0 else latency,

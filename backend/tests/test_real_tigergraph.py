@@ -90,5 +90,6 @@ def test_08_api_endpoints_working():
     assert res_inv.status_code == 200
     data = res_inv.json()
     assert data["case_id"] == "HHG-003"
-    assert data["case_status"] == "UNRESOLVED"
+    assert data["case_status"] == "UNDER_INVESTIGATION"
+    assert data["status"] == "VERIFICATION_PENDING"
     assert data["verdict"] == "NEEDS_REVIEW"

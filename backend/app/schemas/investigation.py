@@ -12,6 +12,7 @@ class HealthCheck(BaseModel):
 
 class CaseBase(BaseModel):
     case_id: str
+    customer_id: Optional[str] = None
     status: str
     verdict: Optional[str] = None
     fraud_probability: Optional[float] = None

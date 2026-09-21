@@ -84,7 +84,8 @@ def _build_bounded_context_payload(context: InvestigationContext) -> Dict[str, A
             {
                 "id": er.get("request_id") or er.get("id"),
                 "type": er.get("request_type") or er.get("type"),
-                "status": er.get("status")
+                "status": er.get("status"),
+                "request_text": er.get("request_text") or er.get("details", {}).get("request_text") or "Confirm transaction"
             }
             for er in facts.evidence_requests_info[:5]
         ]
@@ -216,6 +217,13 @@ def analyze_investigation_context(context: InvestigationContext) -> Investigatio
         if payload["truncated"]:
             missing.append("Context payload was truncated to 15 key evidence items for LLM processing.")
 
+        if pending_requests:
+            # Ensure pending evidence requests are never mischaracterized as undisputed
+            summary = summary.replace("undisputed", "subject to pending customer verification")
+            summary = summary.replace("Undisputed", "subject to pending customer verification")
+            summary = summary.replace("undisputed transaction", "transaction pending customer verification")
+            summary = summary.replace("undisputed transactions", "transactions pending customer verification")
+
     else:
         # Factual fallback if Groq API is unavailable (No fake verdicts or mock data)
         key_findings = [
@@ -243,12 +251,16 @@ def analyze_investigation_context(context: InvestigationContext) -> Investigatio
         if not facts.devices_info:
             missing.append("Device fingerprint metadata is missing.")
 
-        uncertainties = [f"Awaiting customer verification for pending evidence request(s)."] if pending_requests else []
+        uncertainties = [f"The transaction is subject to a pending customer verification request. No customer response has been received."] if pending_requests else []
 
-        summary = (
-            f"Factual reasoning for Case {case_id}: Analyzed {len(affected_txns)} transaction(s) with ${exposure:,.2f} exposure. "
-            f"Identified {len(observed_patterns)} risk pattern(s). Pending evidence requests: {len(pending_requests)}."
-        )
+        if pending_requests:
+            summary = (
+                f"The transaction is subject to a pending customer verification request. No customer response has been received."
+            )
+        else:
+            summary = (
+                f"Factual reasoning for Case {case_id}: Analyzed {len(affected_txns)} transaction(s) with ${exposure:,.2f} exposure."
+            )
 
     # CRITICAL: preliminary_fraud_probability remains None to avoid converting risk_score into fraud_probability
     return InvestigationReasoningOutput(

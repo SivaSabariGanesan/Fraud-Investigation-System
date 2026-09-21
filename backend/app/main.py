@@ -14,6 +14,15 @@ logger = logging.getLogger("fraud_investigation")
 # Initialize database tables
 Base.metadata.create_all(bind=engine)
 
+# Ensure customer_id column exists on SQLite cases table
+try:
+    with engine.connect() as conn:
+        from sqlalchemy import text
+        conn.execute(text("ALTER TABLE cases ADD COLUMN customer_id VARCHAR;"))
+        conn.commit()
+except Exception:
+    pass
+
 app = FastAPI(
     title=settings.APP_NAME,
     version="1.0.0",

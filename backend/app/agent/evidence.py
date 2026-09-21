@@ -1,6 +1,6 @@
 import logging
 from typing import Dict, Any, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -11,7 +11,7 @@ class EvidenceItem(BaseModel):
     Preserves raw data and provides clear, un-interpreted observed facts.
     """
     evidence_id: str
-    evidence_type: str  # transaction, customer, card, device, billing_region, email_domain, related_transaction, related_case, evidence_request
+    evidence_type: str  # Transaction, Customer, Card, DeviceProfile, BillingRegion, EmailDomain, EvidenceRequest
     source: str = "TigerGraph"
     description: str
     related_entity: Optional[str] = None
@@ -19,7 +19,7 @@ class EvidenceItem(BaseModel):
     card_id: Optional[str] = None
     strength: Optional[str] = "NEUTRAL"  # HIGH, MEDIUM, LOW, NEUTRAL (signal strength if supported by data)
     raw_data: Dict[str, Any] = Field(default_factory=dict)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: Optional[Any] = None
 
 def normalize_case_evidence(case_data: Optional[Dict[str, Any]]) -> Optional[EvidenceItem]:
     """Normalize raw ClosedCase vertex data into an EvidenceItem."""
@@ -32,7 +32,7 @@ def normalize_case_evidence(case_data: Optional[Dict[str, Any]]) -> Optional[Evi
     
     return EvidenceItem(
         evidence_id=f"EV-CASE-{case_id}",
-        evidence_type="related_case",
+        evidence_type="ClosedCase",
         source="TigerGraph",
         description=f"ClosedCase record '{case_id}' with status '{status}' and verdict '{verdict}'.",
         related_entity=case_id,
@@ -48,10 +48,21 @@ def normalize_transaction_evidence(txn: Optional[Dict[str, Any]], is_related: bo
     amount = txn.get("amount", 0.0)
     currency = txn.get("currency", "USD")
     status = txn.get("status", "UNKNOWN")
-    timestamp = txn.get("timestamp", "N/A")
 
-    ev_type = "related_transaction" if is_related else "transaction"
-    desc = f"Transaction '{txn_id}' observed: amount={amount} {currency}, status='{status}', timestamp='{timestamp}'."
+    # Preserve explicit transaction timestamp from TigerGraph ts attribute
+    raw_ts = txn.get("ts") or txn.get("timestamp") or txn.get("created_at")
+    formatted_ts = None
+    if raw_ts is not None:
+        if isinstance(raw_ts, (int, float)):
+            try:
+                formatted_ts = datetime.fromtimestamp(raw_ts, tz=timezone.utc).isoformat()
+            except Exception:
+                formatted_ts = str(raw_ts)
+        else:
+            formatted_ts = str(raw_ts)
+
+    ev_type = "RelatedTransaction" if is_related else "Transaction"
+    desc = f"Transaction '{txn_id}' observed: amount={amount} {currency}, status='{status}'."
 
     return EvidenceItem(
         evidence_id=f"EV-TXN-{txn_id}",
@@ -59,6 +70,7 @@ def normalize_transaction_evidence(txn: Optional[Dict[str, Any]], is_related: bo
         source="TigerGraph",
         description=desc,
         transaction_id=txn_id,
+        timestamp=formatted_ts,
         raw_data=txn
     )
 
@@ -73,7 +85,7 @@ def normalize_customer_evidence(cust: Optional[Dict[str, Any]]) -> Optional[Evid
 
     return EvidenceItem(
         evidence_id=f"EV-CUST-{cust_id}",
-        evidence_type="customer",
+        evidence_type="Customer",
         source="TigerGraph",
         description=f"Customer record '{cust_id}' ({name}) observed with recorded risk_level='{risk_level}'.",
         related_entity=cust_id,
