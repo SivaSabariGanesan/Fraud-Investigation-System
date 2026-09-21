@@ -214,6 +214,7 @@ class FraudInvestigatorAgent:
         return InvestigationResult(
             case_id=case_id,
             case_status=decision_result.decision_state,
+            status=decision_result.decision_state,
             verdict=decision_result.verdict,
             fraud_probability=decision_result.fraud_probability,
             pattern=decision_result.primary_pattern,
@@ -230,8 +231,9 @@ class FraudInvestigatorAgent:
             SAR=sar_payload,
             stop_reason="WORKFLOW_COMPLETE",
             tool_calls=[tc.model_dump() for tc in state.tool_calls],
-            tokens={"prompt": 450, "completion": 180, "total": 630},
-            latency=latency
+            tokens=reasoning_output.llm_tokens if reasoning_output.llm_tokens else {"prompt": 0, "completion": 0, "total": 0},
+            latency=reasoning_output.llm_latency if reasoning_output.llm_latency > 0 else latency,
+            reasoning_summary=reasoning_output.analytical_summary
         )
 
     # Method alias for API endpoint compatibility

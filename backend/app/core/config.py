@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     TIGERGRAPH_PASSWORD: Optional[str] = None
     
     # AI / LLM Configuration
+    LLM_PROVIDER: str = "groq"
+    GROQ_API_KEY: Optional[str] = None
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
     OPENAI_API_KEY: Optional[str] = None
     LLM_MODEL: str = "gpt-4o"
 

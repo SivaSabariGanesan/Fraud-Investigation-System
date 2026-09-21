@@ -24,7 +24,7 @@ class DecisionResult(BaseModel):
     decision_state: str  # UNDER_INVESTIGATION, VERIFICATION_PENDING, UNRESOLVED, CONFIRMED_FRAUD, CLEARED
     verification_status: str  # PENDING, COMPLETED, NOT_REQUIRED
     verdict: str  # APPROVED, DECLINED, NEEDS_REVIEW
-    fraud_probability: float = Field(ge=0.0, le=1.0)
+    fraud_probability: Optional[float] = Field(default=None, ge=0.0, le=1.0)
     primary_pattern: str
     rules_evaluated: List[PolicyRuleResult] = Field(default_factory=list)
     triggered_rule_ids: List[str] = Field(default_factory=list)
@@ -237,8 +237,9 @@ def evaluate_policy_rules(
         actions = ["CLOSE_CASE", "UNFLAG_TRANSACTION"]
         explanation = "No critical risk policy rules triggered. Case cleared."
 
-    # Use max_risk_score if positive, otherwise reasoning preliminary probability
-    fraud_prob = max_risk_score if max_risk_score > 0 else (reasoning.preliminary_fraud_probability or 0.0)
+    # Risk score is an investigation signal, not a fraud_probability.
+    # Keep fraud_probability as None unless an independently calibrated source is provided.
+    fraud_prob = reasoning.preliminary_fraud_probability
 
     return DecisionResult(
         case_id=case_id,

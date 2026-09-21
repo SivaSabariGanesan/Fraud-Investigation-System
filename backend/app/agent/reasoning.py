@@ -1,11 +1,31 @@
+import json
+import time
 import logging
 from typing import List, Dict, Any, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
+from app.core.config import settings
 from app.agent.context import InvestigationContext
-from app.agent.evidence import EvidenceItem
+from app.agent.prompts import GROQ_INVESTIGATION_SYSTEM_PROMPT, format_groq_user_prompt
 
 logger = logging.getLogger(__name__)
+
+class KeyEvidenceItem(BaseModel):
+    """Schema for individual evidence finding item in LLM output."""
+    evidence_id: str
+    finding: str
+    significance: str = "NEUTRAL"  # LOW, MEDIUM, HIGH, NEUTRAL
+
+class GroqLLMReasoningSchema(BaseModel):
+    """Strict structured Pydantic schema for Groq LLM output."""
+    summary: str = ""
+    key_evidence: List[KeyEvidenceItem] = Field(default_factory=list)
+    observed_patterns: List[str] = Field(default_factory=list)
+    conflicting_evidence: List[str] = Field(default_factory=list)
+    missing_evidence: List[str] = Field(default_factory=list)
+    uncertainties: List[str] = Field(default_factory=list)
+    relevant_rules: List[str] = Field(default_factory=list)
+    reasoning: str = ""
 
 class InvestigationReasoningOutput(BaseModel):
     """
@@ -23,124 +43,231 @@ class InvestigationReasoningOutput(BaseModel):
     potentially_connected_cards: List[str] = Field(default_factory=list)
     potentially_connected_devices: List[str] = Field(default_factory=list)
     exposure: float = 0.0
-    preliminary_fraud_probability: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    preliminary_fraud_probability: Optional[float] = None
     customer_disputes_represented: List[str] = Field(default_factory=list)
     pending_evidence_requests: List[str] = Field(default_factory=list)
     analytical_summary: str = ""
+    # Observability metrics (No sensitive key logging)
+    llm_model: Optional[str] = None
+    llm_latency: float = 0.0
+    llm_tokens: Dict[str, int] = Field(default_factory=lambda: {"prompt": 0, "completion": 0, "total": 0})
+
+def _build_bounded_context_payload(context: InvestigationContext) -> Dict[str, Any]:
+    """
+    Constructs a bounded text payload from InvestigationContext to prevent excessive token usage.
+    """
+    facts = context.observed_facts
+    derived = context.derived_observations
+    evidence_items = context.normalized_evidence
+
+    # Flagged transactions summary
+    txns_summary = [
+        {
+            "id": t.get("id") or t.get("TransactionID"),
+            "amount": t.get("amount"),
+            "channel": t.get("channel"),
+            "product_code": t.get("product_code"),
+            "risk_signal": t.get("risk_score"),
+            "disputed": t.get("disputed", False)
+        }
+        for t in facts.transactions[:10]  # Max 10 transactions
+    ]
+
+    # Connected entities summary
+    connected_summary = {
+        "customer_id": facts.customer_info.get("customer_id") if facts.customer_info else None,
+        "cards": [c.get("card_id") or c.get("id") for c in facts.cards_info[:5]],
+        "devices": [d.get("device_id") or d.get("id") for d in facts.devices_info[:5]],
+        "billing_regions": [r.get("region_id") or r.get("id") for r in facts.billing_regions_info[:5]],
+        "email_domains": [e.get("email_domain") or e.get("id") for e in facts.email_domains_info[:5]],
+        "evidence_requests": [
+            {
+                "id": er.get("request_id") or er.get("id"),
+                "type": er.get("request_type") or er.get("type"),
+                "status": er.get("status")
+            }
+            for er in facts.evidence_requests_info[:5]
+        ]
+    }
+
+    # Bounded normalized evidence items (max 15)
+    max_evidence_items = 15
+    truncated = len(evidence_items) > max_evidence_items
+    bounded_evidence = [
+        {
+            "id": ev.evidence_id,
+            "type": ev.evidence_type,
+            "description": ev.description,
+            "strength": ev.strength,
+            "risk_signal": getattr(ev, "risk_signal", None) or getattr(ev, "strength", None) or ev.raw_data.get("risk_score")
+        }
+        for ev in evidence_items[:max_evidence_items]
+    ]
+
+    return {
+        "case_id": context.case_id,
+        "txns_summary": json.dumps(txns_summary),
+        "connected_summary": json.dumps(connected_summary),
+        "derived_summary": json.dumps({
+            "stolen_cards": derived.stolen_cards_count,
+            "vpn_devices": derived.vpn_devices_count,
+            "regional_mismatches": derived.regional_mismatches_count,
+            "disposable_emails": derived.disposable_email_domains_count,
+            "historical_fraud_cases": derived.historical_fraud_cases_count,
+            "total_exposure": derived.total_exposure_amount
+        }),
+        "evidence_summary": json.dumps(bounded_evidence),
+        "evidence_count": len(evidence_items),
+        "truncated": truncated
+    }
 
 def analyze_investigation_context(context: InvestigationContext) -> InvestigationReasoningOutput:
     """
-    Analyzes an InvestigationContext to produce structured reasoning findings.
-    Operates strictly as an analytical layer: does not execute policy actions (e.g. BLOCK_CARD)
-    and does not write to TigerGraph or SQLite.
+    Analyzes InvestigationContext using Groq LLM (openai/gpt-oss-120b).
+    Produces structured reasoning for downstream deterministic policy rules (R1-R10).
     """
     case_id = context.case_id
     facts = context.observed_facts
     derived = context.derived_observations
     evidence_items = context.normalized_evidence
 
-    key_findings = []
-    observed_patterns = []
-    supporting_evidence_ids = []
-    contradictory_evidence = []
-    missing_evidence = []
-    uncertainty = []
-    customer_disputes = []
-    pending_requests = []
-
-    # Extract transaction IDs, card IDs, and device IDs from observed facts
+    # Extract base IDs
     affected_txns = [t.get("id") for t in facts.transactions if t.get("id")]
     connected_cards = [c.get("id") for c in facts.cards_info if c.get("id")]
     connected_devs = [d.get("id") for d in facts.devices_info if d.get("id")]
     exposure = derived.total_exposure_amount
 
-    # Process evidence items into supporting, contradictory, or missing categories
-    for item in evidence_items:
-        supporting_evidence_ids.append(item.evidence_id)
+    # Collect customer disputes and pending evidence requests
+    customer_disputes = [
+        f"Transaction {t.get('id')} disputed by customer."
+        for t in facts.transactions if t.get("disputed") is True
+    ]
+    pending_requests = [
+        f"EvidenceRequest {er.get('id') or er.get('request_id')} status is '{er.get('status')}'"
+        for er in facts.evidence_requests_info
+        if str(er.get("status")).lower() in ("pending", "submitted")
+    ]
 
-        if item.evidence_type == "card" and item.raw_data.get("stolen_flag") is True:
-            key_findings.append(f"Card {item.card_id} is flagged as stolen in system records.")
-            observed_patterns.append("Stolen Card Usage")
+    supporting_ids = [e.evidence_id for e in evidence_items]
 
-        elif item.evidence_type == "device" and item.raw_data.get("vpn_detected") is True:
-            key_findings.append(f"Device Profile {item.related_entity} utilized VPN/Proxy during transaction.")
-            observed_patterns.append("Device Spoofing / Anonymized Proxy")
-
-        elif item.evidence_type == "billing_region" and item.raw_data.get("mismatch_flag") is True:
-            key_findings.append(f"Billing Region {item.related_entity} indicates cross-border geographic mismatch.")
-            observed_patterns.append("Geographic Mismatch")
-
-        elif item.evidence_type == "email_domain" and item.raw_data.get("disposable") is True:
-            key_findings.append(f"Email domain {item.related_entity} belongs to disposable email service.")
-            observed_patterns.append("Disposable Communication Identity")
-
-        elif item.evidence_type == "related_case" and item.raw_data.get("verdict") == "FRAUD_CONFIRMED":
-            key_findings.append(f"Historical case {item.related_entity} confirmed fraud on linked entity.")
-            observed_patterns.append("Historical Recurrent Fraud Link")
-
-        elif item.evidence_type == "evidence_request":
-            req_status = item.raw_data.get("status", "PENDING")
-            if req_status in ("PENDING", "SUBMITTED"):
-                pending_requests.append(f"EvidenceRequest {item.evidence_id} status is '{req_status}' - awaiting response.")
-                uncertainty.append(f"Pending evidence request '{item.evidence_id}' has not been completed.")
-
-    # Check for customer disputes in transaction or case data
-    for txn in facts.transactions:
-        if txn.get("disputed") is True or txn.get("status") == "DISPUTED":
-            customer_disputes.append(f"Transaction {txn.get('id')} flagged as disputed by customer.")
-
-    # Identify missing evidence / data gaps
-    if not facts.customer_info:
-        missing_evidence.append("Customer profile metadata is unlinked or missing from graph.")
-    if not facts.devices_info:
-        missing_evidence.append("No device fingerprint payload associated with current transaction(s).")
-    if not facts.billing_regions_info:
-        missing_evidence.append("Billing region geographic data is missing.")
-
-    # Check for contradictory evidence (e.g. verified home device vs stolen card flag)
-    clean_devices = [d for d in facts.devices_info if d.get("vpn_detected") is False]
-    stolen_cards = [c for c in facts.cards_info if c.get("stolen_flag") is True]
-    if clean_devices and stolen_cards:
-        contradictory_evidence.append(
-            "Transaction performed from non-VPN device, but card is flagged as stolen."
-        )
-
-    # Compute preliminary signal score (for investigation signal ranking, not a final policy verdict)
-    signal_weights = 0
-    total_checks = 4
-    if derived.stolen_cards_count > 0:
-        signal_weights += 1
-    if derived.vpn_devices_count > 0:
-        signal_weights += 1
-    if derived.regional_mismatches_count > 0:
-        signal_weights += 0.5
-    if derived.disposable_email_domains_count > 0:
-        signal_weights += 0.5
-    if derived.historical_fraud_cases_count > 0:
-        signal_weights += 1
-
-    preliminary_score = min(1.0, round(signal_weights / total_checks, 2)) if total_checks > 0 else 0.0
-
-    summary = (
-        f"Analyzed {len(affected_txns)} transaction(s) totaling ${exposure:,.2f} USD exposure. "
-        f"Identified {len(observed_patterns)} distinct pattern(s) across {len(supporting_evidence_ids)} evidence item(s). "
-        f"Preliminary risk signal score: {preliminary_score:.0%}. Pending evidence requests: {len(pending_requests)}."
+    # Prepare context payload for Groq
+    payload = _build_bounded_context_payload(context)
+    user_prompt = format_groq_user_prompt(
+        case_id=case_id,
+        observed_facts_summary=f"Transactions: {payload['txns_summary']}\nConnected Entities: {payload['connected_summary']}",
+        derived_observations_summary=payload['derived_summary'],
+        normalized_evidence_summary=payload['evidence_summary'],
+        evidence_count=payload['evidence_count']
     )
 
+    llm_output: Optional[GroqLLMReasoningSchema] = None
+    llm_tokens = {"prompt": 0, "completion": 0, "total": 0}
+    llm_model = settings.GROQ_MODEL
+    latency = 0.0
+
+    api_key = settings.GROQ_API_KEY
+    if api_key:
+        try:
+            from groq import Groq
+            client = Groq(api_key=api_key)
+            start_time = time.time()
+            
+            completion = client.chat.completions.create(
+                model=settings.GROQ_MODEL,
+                messages=[
+                    {"role": "system", "content": GROQ_INVESTIGATION_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.1
+            )
+            
+            latency = round(time.time() - start_time, 3)
+            if completion.usage:
+                llm_tokens = {
+                    "prompt": getattr(completion.usage, "prompt_tokens", 0),
+                    "completion": getattr(completion.usage, "completion_tokens", 0),
+                    "total": getattr(completion.usage, "total_tokens", 0)
+                }
+            if completion.model:
+                llm_model = completion.model
+
+            raw_content = completion.choices[0].message.content
+            if raw_content:
+                parsed_json = json.loads(raw_content)
+                llm_output = GroqLLMReasoningSchema.model_validate(parsed_json)
+
+        except Exception as e:
+            logger.warning(f"Groq LLM reasoning execution error: {str(e)}")
+            llm_output = None
+
+    # Construct final reasoning output combining LLM structured findings or clear fallback
+    if llm_output:
+        key_findings = [item.finding for item in llm_output.key_evidence]
+        if not key_findings and llm_output.reasoning:
+            key_findings = [llm_output.reasoning]
+
+        observed_patterns = llm_output.observed_patterns
+        contradictory = llm_output.conflicting_evidence
+        missing = llm_output.missing_evidence
+        uncertainties = llm_output.uncertainties
+        summary = llm_output.summary or llm_output.reasoning
+
+        if payload["truncated"]:
+            missing.append("Context payload was truncated to 15 key evidence items for LLM processing.")
+
+    else:
+        # Factual fallback if Groq API is unavailable (No fake verdicts or mock data)
+        key_findings = [
+            f"Case {case_id} contains {len(affected_txns)} transaction(s) totaling ${exposure:,.2f} USD exposure."
+        ]
+        if pending_requests:
+            key_findings.append(f"Pending evidence request(s): {', '.join(pending_requests)}")
+
+        observed_patterns = []
+        if derived.stolen_cards_count > 0:
+            observed_patterns.append("Stolen Card Usage")
+        if derived.vpn_devices_count > 0:
+            observed_patterns.append("Device Spoofing / Anonymized Proxy")
+        if derived.regional_mismatches_count > 0:
+            observed_patterns.append("Geographic Mismatch")
+        if derived.disposable_email_domains_count > 0:
+            observed_patterns.append("Disposable Email Service")
+        if derived.historical_fraud_cases_count > 0:
+            observed_patterns.append("Historical Recurrent Fraud Link")
+
+        contradictory = []
+        missing = []
+        if not facts.customer_info:
+            missing.append("Customer profile metadata is missing or unlinked.")
+        if not facts.devices_info:
+            missing.append("Device fingerprint metadata is missing.")
+
+        uncertainties = [f"Awaiting customer verification for pending evidence request(s)."] if pending_requests else []
+
+        summary = (
+            f"Factual reasoning for Case {case_id}: Analyzed {len(affected_txns)} transaction(s) with ${exposure:,.2f} exposure. "
+            f"Identified {len(observed_patterns)} risk pattern(s). Pending evidence requests: {len(pending_requests)}."
+        )
+
+    # CRITICAL: preliminary_fraud_probability remains None to avoid converting risk_score into fraud_probability
     return InvestigationReasoningOutput(
         case_id=case_id,
         key_findings=key_findings,
         observed_patterns=list(set(observed_patterns)),
-        supporting_evidence_ids=supporting_evidence_ids,
-        contradictory_evidence=contradictory_evidence,
-        missing_evidence=missing_evidence,
-        uncertainty=uncertainty,
+        supporting_evidence_ids=supporting_ids,
+        contradictory_evidence=contradictory,
+        missing_evidence=missing,
+        uncertainty=uncertainties,
         affected_transaction_ids=affected_txns,
         potentially_connected_cards=connected_cards,
         potentially_connected_devices=connected_devs,
         exposure=exposure,
-        preliminary_fraud_probability=preliminary_score,
+        preliminary_fraud_probability=None,
         customer_disputes_represented=customer_disputes,
         pending_evidence_requests=pending_requests,
-        analytical_summary=summary
+        analytical_summary=summary,
+        llm_model=llm_model,
+        llm_latency=latency,
+        llm_tokens=llm_tokens
     )

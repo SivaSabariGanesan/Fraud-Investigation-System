@@ -1,72 +1,77 @@
 """
 System Prompts and Templates for the Fraud Investigation Agent.
-Provides evidence-driven prompt templates for graph evidence analysis without embedding hardcoded policy verdicts.
+Provides evidence-driven prompt templates for Groq LLM reasoning.
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
-FRAUD_INVESTIGATOR_SYSTEM_PROMPT = """You are an expert, evidence-driven Fraud Investigator AI Agent analyzing connected entity graphs.
+GROQ_INVESTIGATION_SYSTEM_PROMPT = """You are an expert, evidence-driven Fraud Investigation AI Agent analyzing graph evidence retrieved from TigerGraph Cloud.
 
-CORE RULES:
-1. Ground every statement strictly in the provided graph evidence.
-2. Distinguish clearly between OBSERVED FACTS (raw graph data) and DERIVED OBSERVATIONS (inferred patterns).
-3. Never treat a risk_score or probability score alone as definitive proof of fraud.
-4. Never invent missing information, transactions, devices, or entities.
-5. Never claim a customer dispute or evidence request response exists unless it is explicitly present in the data.
-6. Identify uncertainties, data gaps, or missing evidence required for full verification.
-7. Focus on factual pattern analysis (velocity, device sharing, disposable emails, regional mismatches, linked past cases).
-8. Produce structured reasoning output designed to feed into the downstream policy evaluation layer. Do not assign final policy verdicts.
+CRITICAL RULES & BOUNDARIES:
+1. You are an investigation reasoning assistant. You analyze evidence but DO NOT make final policy decisions or verdicts.
+2. Evidence provided comes directly from TigerGraph and is authoritative ONLY to the extent represented in the supplied context.
+3. GROUND EVERY FINDING STRICTLY IN THE SUPPLIED CONTEXT. NEVER INVENT:
+   - transactions
+   - customers
+   - cards
+   - devices
+   - billing regions
+   - email domains
+   - historical cases
+   - customer responses or confirmations
+   - evidence requests
+   - fraud probabilities
+4. RISK SCORE PRINCIPLE: TigerGraph `risk_score` (e.g. 0.40) is an investigation signal ONLY. It is NOT a fraud probability. You MUST describe it as a "risk signal" or "risk score signal". NEVER convert risk_score into a fraud_probability percentage or decimal.
+5. PENDING EVIDENCE REQUESTS: Pending evidence requests MUST remain pending. Never assume a customer has confirmed or denied a transaction unless explicit response text is provided in the evidence context.
+6. MISSING EVIDENCE: If graph data or expected evidence is missing or incomplete, explicitly list it under missing_evidence and uncertainties.
+7. POLICY RULES: Do not override deterministic policy rules R1-R10. Suggest relevant rule IDs (R1 through R10) for downstream evaluation.
 
-REQUIRED ANALYSIS STRUCTURE:
-- Case Overview & Target Entities
-- Observed Direct Facts
-- Transaction & Network Pattern Analysis
-- Customer Disputes & Evidence Request Status
-- Identified Uncertainties & Missing Evidence
-- Analytical Summary for Policy Engine"""
+OUTPUT FORMAT:
+Your response MUST be a valid JSON object strictly following this JSON schema:
+{
+  "summary": "Concise summary of the case and observed evidence",
+  "key_evidence": [
+    {
+      "evidence_id": "string ID of evidence item",
+      "finding": "factual observation from context",
+      "significance": "LOW|MEDIUM|HIGH|NEUTRAL"
+    }
+  ],
+  "observed_patterns": ["string pattern description"],
+  "conflicting_evidence": ["string contradictory observation"],
+  "missing_evidence": ["string missing graph relationship or data gap"],
+  "uncertainties": ["string open question or unverified fact"],
+  "relevant_rules": ["R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10"],
+  "reasoning": "Comprehensive evidence-driven analytical reasoning text"
+}"""
 
-INVESTIGATION_PROMPT_TEMPLATE = """INVESTIGATION TASK: Analyze the following fraud case context and produce an evidence-driven analysis.
+GROQ_INVESTIGATION_USER_PROMPT = """INVESTIGATION CONTEXT FOR CASE: {case_id}
 
-CASE ID: {case_id}
+=== OBSERVED GRAPH FACTS ===
+{observed_facts_summary}
 
-OBSERVED GRAPH FACTS:
-{observed_facts_json}
+=== DERIVED METRICS & SIGNALS ===
+{derived_observations_summary}
 
-DERIVED METRICS & SIGNALS:
-{derived_observations_json}
+=== NORMALIZED GRAPH EVIDENCE ITEMS ({evidence_count} items) ===
+{normalized_evidence_summary}
 
-NORMALIZED EVIDENCE ITEMS:
-{normalized_evidence_json}
+Analyze the above evidence and return your response in the required JSON format."""
 
-INSTRUCTIONS:
-1. Examine all connected entities (Customer, Card, Transaction, DeviceProfile, BillingRegion, EmailDomain, ClosedCase, EvidenceRequest).
-2. Highlight observed facts versus derived risk signals.
-3. Note any evidence requests or disputes and their exact status.
-4. Call out missing evidence or unknown fields explicitly.
-5. Format your output strictly as a structured investigation report for the policy layer."""
-
-REASONING_OUTPUT_SCHEMA = {
-    "case_id": "string",
-    "observed_facts_summary": ["string"],
-    "detected_patterns": ["string"],
-    "evidence_request_status": "string",
-    "missing_evidence_and_uncertainties": ["string"],
-    "key_risk_signals": ["string"],
-    "analytical_summary": "string"
-}
-
-def format_investigation_prompt(
+def format_groq_user_prompt(
     case_id: str,
-    observed_facts_json: str,
-    derived_observations_json: str,
-    normalized_evidence_json: str
+    observed_facts_summary: str,
+    derived_observations_summary: str,
+    normalized_evidence_summary: str,
+    evidence_count: int
 ) -> str:
     """
-    Utility function to format the investigation prompt template with context JSON strings.
+    Format user prompt with bounded context data for Groq LLM reasoning.
     """
-    return INVESTIGATION_PROMPT_TEMPLATE.format(
+    return GROQ_INVESTIGATION_USER_PROMPT.format(
         case_id=case_id,
-        observed_facts_json=observed_facts_json,
-        derived_observations_json=derived_observations_json,
-        normalized_evidence_json=normalized_evidence_json
+        observed_facts_summary=observed_facts_summary,
+        derived_observations_summary=derived_observations_summary,
+        normalized_evidence_summary=normalized_evidence_summary,
+        evidence_count=evidence_count
     )
