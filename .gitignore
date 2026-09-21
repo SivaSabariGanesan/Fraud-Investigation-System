@@ -1,0 +1,24 @@
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# Node dependencies
+node_modules/
+
+# Python Virtual Environments & Caches
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Environment Variable Files
+.env
+.env.local
+
+# Database files
+*.db
+*.sqlite3
+
+# Build outputs
+dist/
+build/

@@ -1,0 +1,36 @@
+import axios from 'axios';
+import { Case, InvestigationResult, HealthCheckResponse } from '../types/investigation';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+export const apiService = {
+  async checkHealth(): Promise<HealthCheckResponse> {
+    const response = await apiClient.get<HealthCheckResponse>('/health');
+    return response.data;
+  },
+
+  async getCases(): Promise<Case[]> {
+    const response = await apiClient.get<Case[]>('/api/cases');
+    return response.data;
+  },
+
+  async getCaseById(caseId: string): Promise<Case> {
+    const response = await apiClient.get<Case>(`/api/cases/${caseId}`);
+    return response.data;
+  },
+
+  async runInvestigation(caseId: string, notes?: string): Promise<InvestigationResult> {
+    const response = await apiClient.post<InvestigationResult>(`/api/investigations/${caseId}`, {
+      notes: notes || null,
+      force_reinvestigate: true,
+    });
+    return response.data;
+  },
+};
