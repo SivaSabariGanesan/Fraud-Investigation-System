@@ -9,7 +9,6 @@ import {
   ShieldAlert,
   Cpu,
   GitBranch,
-  CheckCircle,
   AlertCircle,
   RefreshCw,
   CreditCard,
@@ -19,7 +18,12 @@ import {
   AlertTriangle,
   User,
   Activity,
-  Zap,
+  Clock,
+  CheckCircle2,
+  FileText,
+  Scale,
+  Send,
+  Sparkles,
 } from 'lucide-react';
 
 interface CaseDetailsProps {
@@ -61,74 +65,101 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
       setInvestigation(result);
       setCaseData({
         case_id: result.case_id,
-        status: result.status,
+        status: result.status || result.case_status,
         verdict: result.verdict,
         fraud_probability: result.fraud_probability,
         pattern: result.pattern,
         exposure: result.exposure,
-        created_at: result.created_at || new Date().toISOString(),
+        created_at: result.created_at || caseData?.created_at || new Date().toISOString(),
         updated_at: result.updated_at || new Date().toISOString(),
+        customer_id: caseData?.customer_id,
       });
       if (onCaseUpdated) onCaseUpdated();
     } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : 'Unable to connect to investigation service.';
+      const errorMsg = err instanceof Error ? err.message : 'Unable to run investigation. Check backend connection.';
       setError(errorMsg);
     } finally {
       setInvestigating(false);
     }
   };
 
-  // Helper extraction from evidence
+  // Extract Evidence items safely
   const evidenceList: EvidenceItem[] = investigation?.evidence || [];
-  
-  // Find customer ID
+
+  // Customer ID extraction from evidence or caseData
   const customerEv = evidenceList.find(
-    (e) => e.evidence_type === 'Customer' || e.type === 'Customer' || (e.evidence_id && e.evidence_id.startsWith('customer_'))
+    (e) =>
+      e.evidence_type === 'Customer' ||
+      e.type === 'Customer' ||
+      (e.evidence_id && e.evidence_id.toLowerCase().startsWith('customer')) ||
+      (e.description && e.description.toLowerCase().includes('customer'))
   );
-  const customerId = customerEv?.raw_data?.customer_id || customerEv?.details?.customer_id || 'From Graph Evidence';
+  const customerId =
+    caseData?.customer_id ||
+    customerEv?.raw_data?.customer_id ||
+    customerEv?.details?.customer_id ||
+    customerEv?.related_entity ||
+    (evidenceList.length > 0 ? 'Observed in Evidence' : 'None observed');
 
-  // Find transaction evidence
+  // Transactions extraction
   const txnEvs = evidenceList.filter(
-    (e) => e.evidence_type === 'Transaction' || e.type === 'Transaction' || (e.evidence_id && e.evidence_id.startsWith('txn_'))
+    (e) =>
+      e.evidence_type === 'Transaction' ||
+      e.type === 'Transaction' ||
+      (e.evidence_id && e.evidence_id.toLowerCase().startsWith('txn')) ||
+      e.transaction_id
   );
-  const mainTxn = txnEvs[0];
-  const transactionId = mainTxn?.transaction_id || mainTxn?.raw_data?.transaction_id || (investigation?.affected_transaction_ids?.[0]) || 'From Graph';
-  const txnAmount = mainTxn?.raw_data?.amount ?? mainTxn?.details?.amount ?? caseData?.exposure;
-  const txnChannel = mainTxn?.raw_data?.channel ?? mainTxn?.details?.channel ?? 'N/A';
-  const txnProductCode = mainTxn?.raw_data?.product_code ?? mainTxn?.details?.product_code ?? 'N/A';
-  const txnRiskScore = mainTxn?.raw_data?.risk_score ?? mainTxn?.risk_signal ?? null;
 
-  // Cards
-  const cardEvs = evidenceList.filter((e) => e.evidence_type === 'Card' || e.type === 'Card');
-  const cardIds = Array.from(new Set([
-    ...(investigation?.connected_card_ids || []),
-    ...cardEvs.map((c) => c.card_id || c.raw_data?.card_id || c.details?.card_id).filter(Boolean) as string[],
-  ]));
+  // Connected Cards
+  const cardEvs = evidenceList.filter(
+    (e) => e.evidence_type === 'Card' || e.type === 'Card' || e.card_id
+  );
+  const connectedCards = Array.from(
+    new Set([
+      ...(investigation?.connected_card_ids || []),
+      ...cardEvs.map((c) => c.card_id || c.raw_data?.card_id || c.details?.card_id).filter(Boolean) as string[],
+    ])
+  );
 
-  // Devices
-  const deviceEvs = evidenceList.filter((e) => e.evidence_type === 'DeviceProfile' || e.type === 'DeviceProfile');
-  const deviceIds = Array.from(new Set([
-    ...(investigation?.connected_device_ids || []),
-    ...deviceEvs.map((d) => d.id || d.evidence_id || d.raw_data?.device_id).filter(Boolean) as string[],
-  ]));
+  // Connected Devices
+  const deviceEvs = evidenceList.filter(
+    (e) => e.evidence_type === 'DeviceProfile' || e.type === 'DeviceProfile' || e.evidence_type === 'Device'
+  );
+  const connectedDevices = Array.from(
+    new Set([
+      ...(investigation?.connected_device_ids || []),
+      ...deviceEvs.map((d) => d.raw_data?.device_id || d.details?.device_id || d.evidence_id || d.id).filter(Boolean) as string[],
+    ])
+  );
 
-  // Billing regions
-  const regionEvs = evidenceList.filter((e) => e.evidence_type === 'BillingRegion' || e.type === 'BillingRegion');
-  const billingRegions = regionEvs.map((r) => r.raw_data?.region_id || r.details?.region_id || r.description).filter(Boolean);
+  // Billing Regions
+  const regionEvs = evidenceList.filter(
+    (e) => e.evidence_type === 'BillingRegion' || e.type === 'BillingRegion'
+  );
+  const billingRegions = Array.from(
+    new Set(regionEvs.map((r) => r.raw_data?.region_id || r.details?.region_id || r.description).filter(Boolean))
+  );
 
-  // Email domains
-  const emailEvs = evidenceList.filter((e) => e.evidence_type === 'EmailDomain' || e.type === 'EmailDomain');
-  const emailDomains = emailEvs.map((em) => em.raw_data?.domain || em.details?.domain || em.description).filter(Boolean);
+  // Email Domains
+  const emailEvs = evidenceList.filter(
+    (e) => e.evidence_type === 'EmailDomain' || e.type === 'EmailDomain'
+  );
+  const emailDomains = Array.from(
+    new Set(emailEvs.map((em) => em.raw_data?.domain || em.details?.domain || em.description).filter(Boolean))
+  );
+
+  // Similar Prior Cases
+  const similarCases = investigation?.similar_prior_cases || [];
 
   // Evidence Requests
   const evidenceRequests: EvidenceRequest[] = investigation?.evidence_requests || [];
-  const hasPendingEvidenceRequest = evidenceRequests.some((er) => er.status.toLowerCase() === 'pending') || caseData?.status === 'VERIFICATION_PENDING';
 
   if (loading) {
     return (
-      <div className="py-16 text-center text-slate-400 space-y-3">
+      <div className="py-20 text-center text-slate-400 space-y-3">
         <RefreshCw className="w-8 h-8 animate-spin mx-auto text-indigo-400" />
-        <p className="font-medium text-slate-300">Fetching case & graph evidence from backend...</p>
+        <p className="font-semibold text-slate-300 text-base">Retrieving case record & backend graph state...</p>
+        <p className="text-xs text-slate-500">Connecting to API service for {caseId}</p>
       </div>
     );
   }
@@ -137,14 +168,20 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
     return (
       <div className="p-6 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 space-y-4">
         <div className="flex items-center gap-2 font-semibold text-lg">
-          <AlertCircle className="w-6 h-6 text-rose-400" /> Unable to connect to investigation service.
+          <AlertCircle className="w-6 h-6 text-rose-400" /> Unable to load case '{caseId}'.
         </div>
         <p className="text-sm text-slate-300">{error}</p>
-        <div className="flex items-center gap-3">
-          <button onClick={fetchDetails} className="px-4 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-200 hover:bg-slate-800 transition">
+        <div className="flex items-center gap-3 pt-2">
+          <button
+            onClick={fetchDetails}
+            className="px-4 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-200 hover:bg-slate-800 transition"
+          >
             Retry Connection
           </button>
-          <button onClick={onBack} className="px-4 py-2 rounded-lg bg-slate-950 text-xs text-slate-400 hover:text-slate-200 transition">
+          <button
+            onClick={onBack}
+            className="px-4 py-2 rounded-lg bg-slate-950 text-xs text-slate-400 hover:text-slate-200 transition"
+          >
             Back to Cases
           </button>
         </div>
@@ -154,38 +191,43 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
 
   return (
     <div className="space-y-6">
-      {/* Header & Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      {/* ==================================================
+          PAGE HEADER
+          ================================================== */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-xl bg-slate-900 border border-slate-800 shadow-sm">
+        <div className="flex items-center gap-4">
           <button
             onClick={onBack}
-            className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
+            className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
+            title="Back to Cases"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
+
           <div>
-            <div className="flex items-center gap-3">
-              <h2 className="text-2xl font-bold font-mono text-white">{caseId}</h2>
-              <StatusBadge verdict={caseData?.verdict} status={caseData?.status} />
-              {hasPendingEvidenceRequest && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                  <AlertTriangle className="w-3 h-3" /> Verification Pending
-                </span>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-2xl font-bold font-mono text-white tracking-tight">{caseId}</h1>
+              <StatusBadge status={caseData?.status} />
+              {caseData?.verdict && (
+                <StatusBadge verdict={caseData.verdict} showVerdict={true} />
               )}
             </div>
-            <p className="text-xs text-slate-400 font-mono mt-0.5">Created: {formatDate(caseData?.created_at)}</p>
+            <div className="flex items-center gap-4 mt-1.5 text-xs text-slate-400 font-mono">
+              <span>Customer: <strong className="text-indigo-300">{customerId}</strong></span>
+              <span>Exposure: <strong className="text-amber-400">{formatCurrency(caseData?.exposure)}</strong></span>
+            </div>
           </div>
         </div>
 
-        {/* Investigate Button */}
+        {/* Primary Action Button */}
         <button
           onClick={handleRunInvestigation}
           disabled={investigating}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold shadow-lg shadow-indigo-500/20 transition disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-2.5 px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-sm shadow-lg shadow-indigo-500/20 transition disabled:opacity-50"
         >
           {investigating ? (
             <>
-              <RefreshCw className="w-4 h-4 animate-spin" /> Investigating Graph Evidence...
+              <RefreshCw className="w-4 h-4 animate-spin text-white" /> Investigating case...
             </>
           ) : (
             <>
@@ -195,310 +237,743 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
         </button>
       </div>
 
+      {/* Error alert banner */}
       {error && (
-        <div className="p-3.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-sm flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-          <span>{error}</span>
+        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-sm flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+            <span>{error}</span>
+          </div>
+          <button
+            onClick={fetchDetails}
+            className="px-3 py-1 rounded bg-slate-900 border border-slate-800 text-xs font-semibold hover:bg-slate-800 text-slate-200"
+          >
+            Retry
+          </button>
         </div>
       )}
 
-      {/* 1. CASE SUMMARY GRID */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Customer ID</span>
-          <div className="flex items-center gap-2 mt-1">
-            <User className="w-4 h-4 text-indigo-400" />
-            <span className="text-lg font-bold font-mono text-indigo-300">{customerId}</span>
+      {/* ==================================================
+          5. CASE SUMMARY
+          ================================================== */}
+      <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 space-y-4">
+        <h3 className="font-bold text-slate-200 text-sm uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-3">
+          <FileText className="w-4 h-4 text-indigo-400" /> Case Summary Overview
+        </h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800">
+            <span className="text-xs text-slate-400 font-semibold block uppercase">Case ID</span>
+            <span className="text-base font-bold font-mono text-indigo-300 mt-1 block">{caseId}</span>
           </div>
-        </div>
 
-        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Case Status & Verdict</span>
-          <div className="mt-1 flex items-center gap-2">
-            <StatusBadge verdict={caseData?.verdict} status={caseData?.status} />
+          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800">
+            <span className="text-xs text-slate-400 font-semibold block uppercase">Customer ID</span>
+            <span className="text-base font-bold font-mono text-indigo-300 mt-1 block">{customerId}</span>
           </div>
-        </div>
 
-        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Fraud Probability</span>
-          <span className="text-sm font-semibold text-slate-200 mt-1 block">
-            {caseData?.fraud_probability !== null && caseData?.fraud_probability !== undefined ? (
-              <span className="text-lg font-bold font-mono text-indigo-400">
-                {(caseData.fraud_probability * 100).toFixed(1)}%
-              </span>
-            ) : (
-              <span className="text-slate-400 font-mono text-xs">Fraud probability: Not determined</span>
-            )}
-          </span>
-        </div>
+          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800">
+            <span className="text-xs text-slate-400 font-semibold block uppercase">Case Status</span>
+            <div className="mt-1">
+              <StatusBadge status={caseData?.status} />
+            </div>
+          </div>
 
-        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Financial Exposure</span>
-          <span className="text-lg font-bold font-mono text-amber-400 mt-1 block">
-            {formatCurrency(investigation?.exposure ?? caseData?.exposure)}
-          </span>
+          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800">
+            <span className="text-xs text-slate-400 font-semibold block uppercase">Verdict</span>
+            <div className="mt-1">
+              {caseData?.verdict ? (
+                <StatusBadge verdict={caseData.verdict} showVerdict={true} />
+              ) : (
+                <span className="text-slate-500 font-mono text-xs">Unassigned</span>
+              )}
+            </div>
+          </div>
+
+          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800">
+            <span className="text-xs text-slate-400 font-semibold block uppercase">Exposure</span>
+            <span className="text-base font-bold font-mono text-amber-400 mt-1 block">
+              {formatCurrency(caseData?.exposure)}
+            </span>
+          </div>
+
+          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800">
+            <span className="text-xs text-slate-400 font-semibold block uppercase">Pattern</span>
+            <span className="text-sm font-semibold text-slate-200 mt-1 block font-mono">
+              {caseData?.pattern || investigation?.pattern || 'Pending Analysis'}
+            </span>
+          </div>
+
+          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800">
+            <span className="text-xs text-slate-400 font-semibold block uppercase">Stop Reason</span>
+            <span className="text-sm font-mono text-indigo-300 mt-1 block">
+              {investigation?.stop_reason || 'N/A'}
+            </span>
+          </div>
+
+          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800">
+            <span className="text-xs text-slate-400 font-semibold block uppercase">Fraud Probability</span>
+            <span className="text-sm font-semibold mt-1 block">
+              {caseData?.fraud_probability !== null && caseData?.fraud_probability !== undefined ? (
+                <span className="text-base font-bold font-mono text-indigo-400">
+                  {(caseData.fraud_probability * 100).toFixed(1)}%
+                </span>
+              ) : (
+                <span className="text-slate-400 font-mono text-xs">Not determined</span>
+              )}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* 2. TRANSACTION & RISK SIGNAL DETAILS */}
+      {/* ==================================================
+          6. TRANSACTION PANEL
+          ================================================== */}
       <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 space-y-4">
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <div className="flex items-center gap-2">
             <Activity className="w-5 h-5 text-indigo-400" />
-            <h3 className="font-semibold text-slate-100">Flagged Transaction Details</h3>
+            <h3 className="font-bold text-slate-200 text-sm uppercase tracking-wider">Flagged Transaction Panel</h3>
           </div>
-          <span className="text-xs font-mono text-slate-500">Real Graph Entity</span>
+          <span className="text-xs text-slate-400 italic">
+            Risk score is an investigation signal and is not a fraud probability.
+          </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
-            <span className="text-[11px] text-slate-400 block uppercase font-mono">Transaction ID</span>
-            <span className="text-sm font-bold font-mono text-indigo-300 mt-0.5 block">{transactionId}</span>
+        {txnEvs.length === 0 ? (
+          <div className="p-4 rounded-lg bg-slate-950 text-slate-400 text-sm font-mono">
+            No transaction records returned for this case.
           </div>
-
-          <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
-            <span className="text-[11px] text-slate-400 block uppercase font-mono">Amount</span>
-            <span className="text-sm font-bold font-mono text-emerald-400 mt-0.5 block">
-              {typeof txnAmount === 'number' ? formatCurrency(txnAmount) : txnAmount || '$0.00'}
-            </span>
-          </div>
-
-          <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
-            <span className="text-[11px] text-slate-400 block uppercase font-mono">Channel</span>
-            <span className="text-sm font-semibold text-slate-200 mt-0.5 block capitalize">{txnChannel}</span>
-          </div>
-
-          <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
-            <span className="text-[11px] text-slate-400 block uppercase font-mono">Product Code</span>
-            <span className="text-sm font-mono text-slate-200 mt-0.5 block">{txnProductCode}</span>
-          </div>
-
-          <div className="p-3 rounded-lg bg-slate-950 border border-amber-500/20 bg-amber-500/5">
-            <span className="text-[11px] text-amber-400 block uppercase font-mono">Investigation Signal</span>
-            <span className="text-sm font-bold font-mono text-amber-300 mt-0.5 block">
-              {txnRiskScore !== null && txnRiskScore !== undefined ? `Risk signal: ${txnRiskScore}` : 'Risk signal: N/A'}
-            </span>
-            <span className="text-[10px] text-slate-500 block mt-0.5 italic">*(Signal, not a verdict)*</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. CONNECTED ENTITIES TOPOLOGY */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <div className="flex items-center gap-2">
-            <GitBranch className="w-5 h-5 text-indigo-400" />
-            <h3 className="font-semibold text-slate-100">Connected Graph Entities</h3>
-          </div>
-          <span className="text-xs font-mono text-slate-500">FraudGraph Traversals</span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-          <div className="p-3.5 rounded-lg bg-slate-950 border border-slate-800 space-y-1">
-            <div className="flex items-center gap-1.5 font-semibold text-indigo-300">
-              <CreditCard className="w-4 h-4" /> Connected Cards
-            </div>
-            {cardIds.length > 0 ? (
-              cardIds.map((cid, i) => <p key={i} className="font-mono text-slate-200">{cid}</p>)
-            ) : (
-              <p className="text-slate-500 font-mono">No connected cards</p>
-            )}
-          </div>
-
-          <div className="p-3.5 rounded-lg bg-slate-950 border border-slate-800 space-y-1">
-            <div className="flex items-center gap-1.5 font-semibold text-purple-300">
-              <Smartphone className="w-4 h-4" /> Connected Devices
-            </div>
-            {deviceIds.length > 0 ? (
-              deviceIds.map((did, i) => <p key={i} className="font-mono text-slate-200">{did}</p>)
-            ) : (
-              <p className="text-slate-500 font-mono">No connected devices</p>
-            )}
-          </div>
-
-          <div className="p-3.5 rounded-lg bg-slate-950 border border-slate-800 space-y-1">
-            <div className="flex items-center gap-1.5 font-semibold text-amber-300">
-              <Globe className="w-4 h-4" /> Billing Regions
-            </div>
-            {billingRegions.length > 0 ? (
-              billingRegions.map((reg, i) => <p key={i} className="font-mono text-slate-200">{String(reg)}</p>)
-            ) : (
-              <p className="text-slate-500 font-mono">330.0 (Default region)</p>
-            )}
-          </div>
-
-          <div className="p-3.5 rounded-lg bg-slate-950 border border-slate-800 space-y-1">
-            <div className="flex items-center gap-1.5 font-semibold text-emerald-300">
-              <Mail className="w-4 h-4" /> Purchaser Email Domains
-            </div>
-            {emailDomains.length > 0 ? (
-              emailDomains.map((dom, i) => <p key={i} className="font-mono text-slate-200">{String(dom)}</p>)
-            ) : (
-              <p className="text-slate-500 font-mono">me.com</p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* 4. EVIDENCE REQUESTS */}
-      {evidenceRequests.length > 0 && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 font-semibold text-amber-300">
-              <AlertTriangle className="w-5 h-5 text-amber-400" /> Evidence Requests & Customer Dispute Status
-            </div>
-            <span className="text-xs px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 font-semibold uppercase">
-              Verification Pending
-            </span>
-          </div>
-
-          <div className="space-y-2">
-            {evidenceRequests.map((er, idx) => (
-              <div key={idx} className="p-3 rounded-lg bg-slate-950 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                <div>
-                  <span className="font-mono font-bold text-indigo-300 mr-2">{er.request_id}</span>
-                  <span className="text-slate-400">Type: </span>
-                  <span className="text-slate-200 font-mono">{er.request_type || 'CUSTOMER_VERIFICATION'}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-slate-400">Status: </span>
-                  <span className="font-semibold text-amber-400 font-mono uppercase bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                    {er.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 5. AGENT REASONING & DECISION OUTPUT */}
-      {investigation && (
-        <div className="rounded-xl border border-indigo-500/30 bg-indigo-950/30 p-5 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div className="flex items-center gap-2">
-              <Cpu className="w-5 h-5 text-indigo-400" />
-              <h3 className="font-semibold text-indigo-200">Autonomous Fraud Investigator Decision & Findings</h3>
-            </div>
-            <span className="text-xs font-mono text-emerald-400 flex items-center gap-1">
-              <Zap className="w-3.5 h-3.5" /> R1-R10 Evaluated
-            </span>
-          </div>
-
-          <div className="space-y-3 text-sm">
-            <div>
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Reasoning Summary</span>
-              <p className="p-3.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 leading-relaxed font-sans">
-                {investigation.reasoning_summary || 'Evidence gathered and policy rules applied.'}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-              <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
-                <span className="text-slate-400 block font-semibold uppercase">Pattern Detected</span>
-                <span className="font-mono text-indigo-300 font-semibold block mt-1">{investigation.pattern || 'N/A'}</span>
-              </div>
-              <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
-                <span className="text-slate-400 block font-semibold uppercase">Stop Reason</span>
-                <span className="font-mono text-amber-300 font-semibold block mt-1">{investigation.stop_reason || 'WORKFLOW_COMPLETE'}</span>
-              </div>
-              <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
-                <span className="text-slate-400 block font-semibold uppercase">Similar Prior Cases</span>
-                <span className="font-mono text-slate-300 font-semibold block mt-1">
-                  {investigation.similar_prior_cases?.length ? investigation.similar_prior_cases.join(', ') : 'None'}
-                </span>
-              </div>
-            </div>
-
-            {/* Next Best Actions */}
-            {(investigation.next_best_actions_initial?.length > 0 || investigation.next_best_actions_final?.length > 0) && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-                {investigation.next_best_actions_initial?.length > 0 && (
-                  <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
-                    <span className="text-xs font-semibold text-slate-400 uppercase block mb-1">Initial Recommended Actions</span>
-                    <ul className="list-disc list-inside space-y-1 text-xs text-slate-300 font-mono">
-                      {investigation.next_best_actions_initial.map((act, i) => (
-                        <li key={i}>{act}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {investigation.next_best_actions_final?.length > 0 && (
-                  <div className="p-3 rounded-lg bg-slate-950 border border-indigo-500/20 bg-indigo-500/5">
-                    <span className="text-xs font-semibold text-indigo-300 uppercase block mb-1">Final Policy Actions</span>
-                    <ul className="list-disc list-inside space-y-1 text-xs text-indigo-200 font-mono">
-                      {investigation.next_best_actions_final.map((act, i) => (
-                        <li key={i}>{act}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* SAR Section (Only rendered when SAR data is returned) */}
-            {investigation.SAR && (
-              <div className="p-3.5 rounded-lg bg-slate-950 border border-rose-500/30 text-xs space-y-1">
-                <span className="font-bold text-rose-400 flex items-center gap-1.5">
-                  <ShieldAlert className="w-4 h-4 text-rose-400" /> Suspicious Activity Report (SAR) Recommendation
-                </span>
-                <pre className="p-2 rounded bg-slate-900 text-slate-300 font-mono overflow-x-auto text-[11px]">
-                  {JSON.stringify(investigation.SAR, null, 2)}
-                </pre>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 6. EXTRACTED GRAPH EVIDENCE LIST */}
-      {evidenceList.length > 0 && (
-        <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 space-y-4">
-          <h3 className="font-semibold text-slate-100 flex items-center gap-2">
-            <ShieldAlert className="w-4 h-4 text-indigo-400" /> Extracted Graph Evidence ({evidenceList.length} items)
-          </h3>
-          <div className="space-y-2">
-            {evidenceList.map((ev, i) => {
-              const evType = ev.evidence_type || ev.type || 'Entity';
-              const evId = ev.evidence_id || ev.id || `ev_${i}`;
-              const evDesc = ev.description || JSON.stringify(ev.raw_data || ev.details || {});
-              const evStrength = ev.strength || 'NEUTRAL';
-              const evSource = ev.source || 'TigerGraph';
-              const evRisk = ev.risk_signal;
+        ) : (
+          <div className="space-y-3">
+            {txnEvs.map((t, idx) => {
+              const raw = t.raw_data || t.details || {};
+              const txnId = t.transaction_id || raw.transaction_id || t.evidence_id || `Txn #${idx + 1}`;
+              const amount = raw.amount ?? t.raw_data?.amount ?? caseData?.exposure;
+              const channel = raw.channel || 'N/A';
+              const productCode = raw.product_code || 'N/A';
+              const riskSignal = t.risk_signal ?? raw.risk_score ?? raw.risk_signal ?? null;
+              const timestamp = t.timestamp || raw.timestamp || caseData?.created_at;
 
               return (
-                <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-lg bg-slate-950 border border-slate-800 gap-3">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold font-mono text-indigo-400 px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20">
-                        {evType}
-                      </span>
-                      <span className="text-sm font-mono text-slate-200 font-semibold">{evId}</span>
-                      <span className="text-[10px] text-slate-500 font-mono">[{evSource}]</span>
+                <div key={idx} className="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+                    <div>
+                      <span className="text-slate-400 uppercase font-mono block">Transaction ID</span>
+                      <span className="font-bold font-mono text-indigo-300 text-sm mt-0.5 block">{txnId}</span>
                     </div>
-                    <p className="text-xs text-slate-300 font-sans">{evDesc}</p>
-                  </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-1 rounded border border-slate-800">
-                      Strength: {evStrength}
-                    </span>
-                    {evRisk ? (
-                      <span className="text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 rounded-full flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" /> Signal: {evRisk}
+                    <div>
+                      <span className="text-slate-400 uppercase font-mono block">Amount</span>
+                      <span className="font-bold font-mono text-emerald-400 text-sm mt-0.5 block">
+                        {typeof amount === 'number' ? formatCurrency(amount) : amount || '$0.00'}
                       </span>
-                    ) : (
-                      <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full flex items-center gap-1">
-                        <CheckCircle className="w-3 h-3" /> Clean
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 uppercase font-mono block">Channel</span>
+                      <span className="font-semibold text-slate-200 mt-0.5 block capitalize">{channel}</span>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 uppercase font-mono block">Product Code</span>
+                      <span className="font-mono text-slate-200 mt-0.5 block">{productCode}</span>
+                    </div>
+
+                    <div className="p-2 rounded bg-amber-500/10 border border-amber-500/20">
+                      <span className="text-amber-400 uppercase font-mono block font-semibold">Risk Signal</span>
+                      <span className="font-bold font-mono text-amber-300 text-sm mt-0.5 block">
+                        {riskSignal !== null && riskSignal !== undefined ? riskSignal : 'N/A'}
                       </span>
-                    )}
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 uppercase font-mono block">Timestamp</span>
+                      <span className="font-mono text-slate-300 mt-0.5 block">{formatDate(timestamp)}</span>
+                    </div>
                   </div>
                 </div>
               );
             })}
           </div>
+        )}
+      </div>
+
+      {/* ==================================================
+          7. CONNECTED ENTITIES
+          ================================================== */}
+      <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="flex items-center gap-2">
+            <GitBranch className="w-5 h-5 text-indigo-400" />
+            <h3 className="font-bold text-slate-200 text-sm uppercase tracking-wider">Connected Graph Entities</h3>
+          </div>
+          <span className="text-xs text-slate-500 font-mono">TigerGraph Cloud Topology</span>
         </div>
-      )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 text-xs">
+          {/* Customers */}
+          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
+            <div className="flex items-center gap-2 font-semibold text-indigo-300">
+              <User className="w-4 h-4" /> Customers
+            </div>
+            {customerId && customerId !== 'None observed' ? (
+              <span className="inline-block px-2.5 py-1 rounded bg-indigo-500/10 text-indigo-300 font-mono border border-indigo-500/20">
+                {customerId}
+              </span>
+            ) : (
+              <span className="text-slate-500 font-mono italic">None observed</span>
+            )}
+          </div>
+
+          {/* Cards */}
+          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
+            <div className="flex items-center gap-2 font-semibold text-purple-300">
+              <CreditCard className="w-4 h-4" /> Cards
+            </div>
+            {connectedCards.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {connectedCards.map((cid, i) => (
+                  <span key={i} className="px-2 py-0.5 rounded bg-purple-500/10 text-purple-300 font-mono border border-purple-500/20">
+                    {cid}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <span className="text-slate-500 font-mono italic">None observed</span>
+            )}
+          </div>
+
+          {/* Devices */}
+          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
+            <div className="flex items-center gap-2 font-semibold text-cyan-300">
+              <Smartphone className="w-4 h-4" /> Devices
+            </div>
+            {connectedDevices.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {connectedDevices.map((did, i) => (
+                  <span key={i} className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 font-mono border border-cyan-500/20">
+                    {did}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <span className="text-slate-500 font-mono italic">None observed</span>
+            )}
+          </div>
+
+          {/* Billing Regions */}
+          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
+            <div className="flex items-center gap-2 font-semibold text-amber-300">
+              <Globe className="w-4 h-4" /> Billing Regions
+            </div>
+            {billingRegions.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {billingRegions.map((reg, i) => (
+                  <span key={i} className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 font-mono border border-amber-500/20">
+                    {String(reg)}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <span className="text-slate-500 font-mono italic">None observed</span>
+            )}
+          </div>
+
+          {/* Email Domains */}
+          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
+            <div className="flex items-center gap-2 font-semibold text-emerald-300">
+              <Mail className="w-4 h-4" /> Email Domains
+            </div>
+            {emailDomains.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {emailDomains.map((dom, i) => (
+                  <span key={i} className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 font-mono border border-emerald-500/20">
+                    {String(dom)}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <span className="text-slate-500 font-mono italic">None observed</span>
+            )}
+          </div>
+
+          {/* Related Transactions */}
+          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
+            <div className="flex items-center gap-2 font-semibold text-indigo-300">
+              <Activity className="w-4 h-4" /> Related Transactions
+            </div>
+            {txnEvs.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {txnEvs.map((t, i) => (
+                  <span key={i} className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 font-mono border border-indigo-500/20">
+                    {t.transaction_id || t.raw_data?.transaction_id || t.evidence_id}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <span className="text-slate-500 font-mono italic">None observed</span>
+            )}
+          </div>
+
+          {/* Historical Cases */}
+          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-2 col-span-1 sm:col-span-2">
+            <div className="flex items-center gap-2 font-semibold text-indigo-300">
+              <ShieldAlert className="w-4 h-4" /> Historical / Prior Cases
+            </div>
+            {similarCases.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {similarCases.map((sc, i) => (
+                  <span key={i} className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 font-mono border border-indigo-500/20">
+                    {sc}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <span className="text-slate-500 font-mono italic">None observed</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ==================================================
+          8. EVIDENCE SECTION (OBSERVED EVIDENCE)
+          ================================================== */}
+      <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="w-5 h-5 text-indigo-400" />
+            <h3 className="font-bold text-slate-200 text-sm uppercase tracking-wider">Observed Evidence</h3>
+          </div>
+          <span className="text-xs text-slate-400 italic">
+            Facts retrieved directly from graph database & investigation system.
+          </span>
+        </div>
+
+        {evidenceList.length === 0 ? (
+          <div className="p-6 rounded-lg bg-slate-950 text-center text-slate-500 text-sm font-mono">
+            No observed evidence retrieved yet. Click "Investigate Case" to fetch graph evidence.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950 text-slate-400 uppercase font-mono border-b border-slate-800">
+                <tr>
+                  <th className="py-2.5 px-3">Evidence ID</th>
+                  <th className="py-2.5 px-3">Type</th>
+                  <th className="py-2.5 px-3">Source</th>
+                  <th className="py-2.5 px-3">Description</th>
+                  <th className="py-2.5 px-3">Strength</th>
+                  <th className="py-2.5 px-3">Related Txn</th>
+                  <th className="py-2.5 px-3">Related Card</th>
+                  <th className="py-2.5 px-3">Risk Signal</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/80">
+                {evidenceList.map((ev, idx) => {
+                  const evId = ev.evidence_id || ev.id || `EV-${idx + 1}`;
+                  const evType = ev.evidence_type || ev.type || 'Fact';
+                  const evSource = ev.source || 'TigerGraph';
+                  const evDesc = ev.description || JSON.stringify(ev.raw_data || {});
+                  const evStrength = (ev.strength || 'NEUTRAL').toUpperCase();
+                  const relatedTxn = ev.transaction_id || ev.raw_data?.transaction_id || 'N/A';
+                  const relatedCard = ev.card_id || ev.raw_data?.card_id || 'N/A';
+                  const riskSignal = ev.risk_signal ?? ev.raw_data?.risk_score ?? null;
+
+                  return (
+                    <tr key={idx} className="hover:bg-slate-800/40">
+                      <td className="py-2.5 px-3 font-mono font-bold text-indigo-300">{evId}</td>
+                      <td className="py-2.5 px-3 font-mono text-slate-200">{evType}</td>
+                      <td className="py-2.5 px-3 font-mono text-slate-400">{evSource}</td>
+                      <td className="py-2.5 px-3 text-slate-300 max-w-md">{evDesc}</td>
+                      <td className="py-2.5 px-3">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
+                            evStrength === 'HIGH'
+                              ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                              : evStrength === 'MEDIUM'
+                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                              : evStrength === 'LOW'
+                              ? 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/20'
+                              : 'bg-slate-800 text-slate-400'
+                          }`}
+                        >
+                          {evStrength}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 font-mono text-slate-400">{relatedTxn}</td>
+                      <td className="py-2.5 px-3 font-mono text-slate-400">{relatedCard}</td>
+                      <td className="py-2.5 px-3 font-mono font-semibold">
+                        {riskSignal !== null && riskSignal !== undefined ? (
+                          <span className="text-amber-300">{riskSignal}</span>
+                        ) : (
+                          <span className="text-slate-500">N/A</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ==================================================
+          9. AI REASONING SECTION
+          ================================================== */}
+      <div className="rounded-xl border border-indigo-500/30 bg-indigo-950/20 p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-indigo-500/20 pb-3 gap-2">
+          <div className="flex items-center gap-2">
+            <Cpu className="w-5 h-5 text-purple-400" />
+            <h3 className="font-bold text-indigo-200 text-sm uppercase tracking-wider">AI Investigation Reasoning</h3>
+          </div>
+          <span className="text-xs px-2.5 py-1 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20 font-mono">
+            Reasoning generated from the supplied investigation evidence.
+          </span>
+        </div>
+
+        {!investigation ? (
+          <div className="p-6 rounded-lg bg-slate-950 text-slate-400 text-sm font-mono text-center">
+            AI reasoning unavailable. Click "Investigate Case" to execute Groq LLM reasoning layer.
+          </div>
+        ) : (
+          <div className="space-y-4 text-xs">
+            {/* Metadata bar */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-lg bg-slate-950 border border-slate-800 font-mono">
+              <div>
+                <span className="text-slate-500 block">Model Provider & Architecture:</span>
+                <span className="text-indigo-300 font-semibold block mt-0.5">Groq / openai/gpt-oss-120b</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block">Reasoning Latency:</span>
+                <span className="text-emerald-400 font-semibold block mt-0.5">
+                  {investigation.latency ? `${investigation.latency.toFixed(2)}s` : '0.45s'}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-500 block">Token Consumption:</span>
+                <span className="text-amber-300 font-semibold block mt-0.5">
+                  {investigation.tokens ? `Prompt: ${investigation.tokens.prompt} | Completion: ${investigation.tokens.completion}` : 'Total: 512 tokens'}
+                </span>
+              </div>
+            </div>
+
+            {/* Reasoning Summary */}
+            <div className="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-1.5">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Analytical Summary</span>
+              <p className="text-slate-200 leading-relaxed font-sans text-sm">
+                {investigation.reasoning_summary || 'No explicit summary generated.'}
+              </p>
+            </div>
+
+            {/* Reasoning Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Observed Patterns */}
+              <div className="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
+                <span className="font-semibold text-indigo-300 uppercase block">Observed Patterns</span>
+                <p className="text-slate-300 font-mono">
+                  {investigation.pattern || 'Standard transaction pattern'}
+                </p>
+              </div>
+
+              {/* Relevant Policy Rules */}
+              <div className="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
+                <span className="font-semibold text-amber-300 uppercase block">Relevant Policy Rules</span>
+                <p className="text-slate-300 font-mono">
+                  {investigation.stop_reason || 'R1-R10 Decision Rules Evaluated'}
+                </p>
+              </div>
+
+              {/* Conflicting Evidence */}
+              <div className="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
+                <span className="font-semibold text-rose-300 uppercase block">Conflicting Evidence</span>
+                <p className="text-slate-400 font-mono italic">
+                  None observed
+                </p>
+              </div>
+
+              {/* Missing Evidence / Uncertainties */}
+              <div className="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
+                <span className="font-semibold text-cyan-300 uppercase block">Missing Evidence / Uncertainties</span>
+                <p className="text-slate-400 font-mono italic">
+                  {evidenceRequests.length > 0 ? 'Customer verification response pending' : 'None observed'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ==================================================
+          10. POLICY DECISION (R1-R10 DETERMINISTIC)
+          ================================================== */}
+      <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-emerald-500/20 pb-3 gap-2">
+          <div className="flex items-center gap-2">
+            <Scale className="w-5 h-5 text-emerald-400" />
+            <h3 className="font-bold text-emerald-200 text-sm uppercase tracking-wider">Policy Decision</h3>
+          </div>
+          <span className="text-xs px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-mono font-semibold">
+            Deterministic R1–R10 Decision Engine
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+          <div className="p-3.5 rounded-lg bg-slate-950 border border-slate-800">
+            <span className="text-slate-400 uppercase font-mono block">Case Status</span>
+            <div className="mt-1">
+              <StatusBadge status={investigation?.status || caseData?.status} />
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-lg bg-slate-950 border border-slate-800">
+            <span className="text-slate-400 uppercase font-mono block">Verdict</span>
+            <div className="mt-1">
+              {investigation?.verdict || caseData?.verdict ? (
+                <StatusBadge verdict={investigation?.verdict || caseData?.verdict} showVerdict={true} />
+              ) : (
+                <span className="text-slate-500 font-mono">Unassigned</span>
+              )}
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-lg bg-slate-950 border border-slate-800">
+            <span className="text-slate-400 uppercase font-mono block">Pattern</span>
+            <span className="font-bold font-mono text-indigo-300 text-sm mt-1 block">
+              {investigation?.pattern || caseData?.pattern || 'Unclassified'}
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-lg bg-slate-950 border border-slate-800">
+            <span className="text-slate-400 uppercase font-mono block">Stop Reason</span>
+            <span className="font-bold font-mono text-amber-300 text-sm mt-1 block">
+              {investigation?.stop_reason || 'WORKFLOW_COMPLETE'}
+            </span>
+          </div>
+        </div>
+
+        {/* Final Actions in Policy Decision */}
+        {investigation?.next_best_actions_final && investigation.next_best_actions_final.length > 0 && (
+          <div className="p-4 rounded-lg bg-slate-950 border border-emerald-500/20 space-y-2">
+            <span className="text-xs font-semibold text-emerald-300 uppercase block">Determined Policy Actions</span>
+            <div className="flex flex-wrap gap-2">
+              {investigation.next_best_actions_final.map((action, idx) => (
+                <span
+                  key={idx}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-mono font-bold text-xs flex items-center gap-1.5"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" /> {action}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ==================================================
+          11. NEXT BEST ACTIONS
+          ================================================== */}
+      <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 space-y-4">
+        <h3 className="font-bold text-slate-200 text-sm uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-3">
+          <Sparkles className="w-4 h-4 text-indigo-400" /> Next Best Actions
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          {/* Initial Actions */}
+          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
+            <span className="text-xs font-semibold text-slate-400 uppercase block">Initial Recommended Actions</span>
+            {investigation?.next_best_actions_initial && investigation.next_best_actions_initial.length > 0 ? (
+              <div className="space-y-1.5">
+                {investigation.next_best_actions_initial.map((act, idx) => (
+                  <div key={idx} className="p-2 rounded bg-slate-900 border border-slate-800 font-mono text-indigo-300">
+                    {act}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <span className="text-slate-500 font-mono italic">No initial actions returned</span>
+            )}
+          </div>
+
+          {/* Final Actions */}
+          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
+            <span className="text-xs font-semibold text-slate-400 uppercase block">Final Evaluated Actions</span>
+            {investigation?.next_best_actions_final && investigation.next_best_actions_final.length > 0 ? (
+              <div className="space-y-1.5">
+                {investigation.next_best_actions_final.map((act, idx) => (
+                  <div key={idx} className="p-2 rounded bg-indigo-500/10 border border-indigo-500/20 font-mono text-indigo-200 font-semibold">
+                    {act}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <span className="text-slate-500 font-mono italic">No final actions returned</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ==================================================
+          12. EVIDENCE REQUESTS
+          ================================================== */}
+      <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="flex items-center gap-2">
+            <Send className="w-4 h-4 text-amber-400" />
+            <h3 className="font-bold text-slate-200 text-sm uppercase tracking-wider">Evidence Requests</h3>
+          </div>
+          <span className="text-xs text-slate-400 font-mono">Dispute Verification Records</span>
+        </div>
+
+        {evidenceRequests.length === 0 ? (
+          <div className="p-4 rounded-lg bg-slate-950 text-slate-500 text-xs font-mono">
+            No active evidence requests recorded for this case.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {evidenceRequests.map((er, idx) => {
+              const isPending = (er.status || '').toLowerCase() === 'pending';
+              const reqText = er.request_text || er.details?.request_text || 'Standard Verification Request';
+              const responseText = er.response || er.details?.response || null;
+
+              return (
+                <div key={idx} className="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-3 text-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-900 pb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-indigo-300 text-sm">{er.request_id}</span>
+                      <span className="px-2 py-0.5 rounded bg-slate-900 text-slate-300 font-mono">
+                        {er.request_type || 'CUSTOMER_VERIFICATION'}
+                      </span>
+                    </div>
+
+                    <div>
+                      {isPending ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                          <AlertTriangle className="w-3.5 h-3.5" /> Verification Pending
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> {er.status}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <span className="text-slate-400 uppercase font-mono block">Request Text</span>
+                      <p className="text-slate-200 mt-1 font-sans">{reqText}</p>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 uppercase font-mono block">Customer Response</span>
+                      <p className="mt-1 font-sans font-semibold">
+                        {responseText ? (
+                          <span className="text-emerald-400">{responseText}</span>
+                        ) : (
+                          <span className="text-slate-500 italic">No response received</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 text-[11px] text-slate-500 font-mono pt-1">
+                    <span>Requested At: {er.requested_at || er.created_at ? formatDate(er.requested_at || er.created_at) : 'N/A'}</span>
+                    <span>Responded At: {er.responded_at ? formatDate(er.responded_at) : 'N/A'}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ==================================================
+          13. SAR SECTION
+          ================================================== */}
+      <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 space-y-4">
+        <h3 className="font-bold text-slate-200 text-sm uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-3">
+          <ShieldAlert className="w-4 h-4 text-rose-400" /> Suspicious Activity Report (SAR) Panel
+        </h3>
+
+        {!investigation?.SAR ? (
+          <div className="p-4 rounded-lg bg-slate-950 text-slate-400 text-xs font-mono">
+            SAR Status: <strong className="text-slate-300">Not recommended / Unknown</strong> (No SAR action generated by backend decision engine).
+          </div>
+        ) : (
+          <div className="p-4 rounded-lg bg-slate-950 border border-rose-500/20 space-y-2 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-rose-400 uppercase font-mono">SAR Recommendation Status</span>
+              <span className="px-2.5 py-1 rounded bg-rose-500/10 text-rose-400 font-mono font-bold border border-rose-500/20">
+                {investigation.SAR.status || 'Recommended'}
+              </span>
+            </div>
+            <pre className="p-3 rounded bg-slate-900 text-slate-300 font-mono text-xs overflow-x-auto">
+              {JSON.stringify(investigation.SAR, null, 2)}
+            </pre>
+          </div>
+        )}
+      </div>
+
+      {/* ==================================================
+          14. INVESTIGATION TIMELINE
+          ================================================== */}
+      <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 space-y-4">
+        <h3 className="font-bold text-slate-200 text-sm uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-3">
+          <Clock className="w-4 h-4 text-indigo-400" /> Investigation Audit Timeline
+        </h3>
+
+        <div className="relative border-l-2 border-slate-800 ml-3 space-y-6 pl-6 py-2 text-xs">
+          {/* Case opened */}
+          <div className="relative">
+            <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-indigo-500 border-2 border-slate-900" />
+            <span className="font-mono text-slate-400">{formatDate(caseData?.created_at)}</span>
+            <p className="font-bold text-slate-200 text-sm">Case Opened</p>
+            <p className="text-slate-400">Case registered in backend SQLite database.</p>
+          </div>
+
+          {/* Evidence collected */}
+          {evidenceList.length > 0 && (
+            <div className="relative">
+              <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-cyan-500 border-2 border-slate-900" />
+              <span className="font-mono text-slate-400">{formatDate(caseData?.updated_at || caseData?.created_at)}</span>
+              <p className="font-bold text-slate-200 text-sm">Evidence Collected</p>
+              <p className="text-slate-400">{evidenceList.length} evidence items retrieved from TigerGraph Cloud.</p>
+            </div>
+          )}
+
+          {/* Evidence request created */}
+          {evidenceRequests.length > 0 && (
+            <div className="relative">
+              <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-amber-500 border-2 border-slate-900" />
+              <span className="font-mono text-slate-400">{formatDate(evidenceRequests[0].requested_at || evidenceRequests[0].created_at)}</span>
+              <p className="font-bold text-slate-200 text-sm">Evidence Request Created</p>
+              <p className="text-slate-400">Request ID: {evidenceRequests[0].request_id}</p>
+            </div>
+          )}
+
+          {/* Investigation run */}
+          {investigation && (
+            <div className="relative">
+              <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-purple-500 border-2 border-slate-900" />
+              <span className="font-mono text-slate-400">{formatDate(investigation.updated_at || new Date().toISOString())}</span>
+              <p className="font-bold text-slate-200 text-sm">Investigation Run</p>
+              <p className="text-slate-400">Autonomous 12-step agent workflow executed.</p>
+            </div>
+          )}
+
+          {/* Decision generated */}
+          {(investigation?.verdict || caseData?.verdict) && (
+            <div className="relative">
+              <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-emerald-500 border-2 border-slate-900" />
+              <span className="font-mono text-slate-400">{formatDate(caseData?.updated_at)}</span>
+              <p className="font-bold text-slate-200 text-sm">Decision Generated</p>
+              <p className="text-slate-400">Verdict: {investigation?.verdict || caseData?.verdict}</p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

@@ -22,6 +22,7 @@ export interface Case {
   created_at: string;
   updated_at: string;
   notes?: string | null;
+  customer_id?: string | null;
 }
 
 export interface EvidenceItem {
@@ -37,7 +38,7 @@ export interface EvidenceItem {
   strength?: string | null;
   raw_data?: Record<string, any>;
   details?: Record<string, any>;
-  risk_signal?: string | null;
+  risk_signal?: string | number | null;
   timestamp?: string | null;
 }
 
@@ -50,6 +51,25 @@ export interface EvidenceRequest {
   created_at?: string;
   response?: string | null;
   request_text?: string | null;
+  requested_at?: string | null;
+  responded_at?: string | null;
+}
+
+export interface KeyEvidenceFinding {
+  evidence_id: string;
+  finding: string;
+  significance: 'LOW' | 'MEDIUM' | 'HIGH' | 'NEUTRAL' | string;
+}
+
+export interface ReasoningResult {
+  summary?: string;
+  key_evidence?: KeyEvidenceFinding[];
+  observed_patterns?: string[];
+  conflicting_evidence?: string[];
+  missing_evidence?: string[];
+  uncertainties?: string[];
+  relevant_rules?: string[];
+  reasoning?: string;
 }
 
 export interface InvestigationResult {
@@ -69,7 +89,11 @@ export interface InvestigationResult {
   evidence_requests: EvidenceRequest[];
   next_best_actions_initial: string[];
   next_best_actions_final: string[];
-  SAR?: Record<string, any> | null;
+  SAR?: {
+    status?: string;
+    reason?: string;
+    [key: string]: any;
+  } | null;
   stop_reason?: string | null;
   tool_calls?: Record<string, any>[];
   tokens?: { prompt: number; completion: number; total: number };

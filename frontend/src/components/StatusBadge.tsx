@@ -1,18 +1,53 @@
 import React from 'react';
 import { Verdict, CaseStatus } from '../types/investigation';
-import { CheckCircle2, AlertTriangle, XCircle, Clock, RefreshCw } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle, Clock, RefreshCw, HelpCircle, ShieldCheck } from 'lucide-react';
 
 interface StatusBadgeProps {
-  verdict?: Verdict;
-  status?: CaseStatus | string;
+  verdict?: Verdict | string | null;
+  status?: CaseStatus | string | null;
   className?: string;
+  showVerdict?: boolean;
 }
 
-export const StatusBadge: React.FC<StatusBadgeProps> = ({ verdict, status, className = '' }) => {
-  const normalizedStatus = (status || '').toUpperCase();
-  const normalizedVerdict = (verdict || '').toUpperCase();
+export const StatusBadge: React.FC<StatusBadgeProps> = ({ verdict, status, className = '', showVerdict = false }) => {
+  const normStatus = (status || '').toUpperCase();
+  const normVerdict = (verdict || '').toUpperCase();
 
-  if (normalizedStatus === 'VERIFICATION_PENDING') {
+  // Explicit Verdict rendering if requested
+  if (showVerdict && normVerdict) {
+    if (normVerdict === 'APPROVED') {
+      return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 ${className}`}>
+          <CheckCircle2 className="w-3.5 h-3.5" /> APPROVED
+        </span>
+      );
+    }
+    if (normVerdict === 'DECLINED') {
+      return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 ${className}`}>
+          <XCircle className="w-3.5 h-3.5" /> DECLINED
+        </span>
+      );
+    }
+    if (normVerdict === 'NEEDS_REVIEW') {
+      return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 ${className}`}>
+          <AlertTriangle className="w-3.5 h-3.5" /> NEEDS REVIEW
+        </span>
+      );
+    }
+  }
+
+  // Case Status Priority
+  if (normStatus === 'UNDER_INVESTIGATION' || normStatus === 'INVESTIGATING') {
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 ${className}`}>
+        <RefreshCw className="w-3.5 h-3.5 animate-spin" /> UNDER INVESTIGATION
+      </span>
+    );
+  }
+
+  if (normStatus === 'VERIFICATION_PENDING') {
     return (
       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 ${className}`}>
         <AlertTriangle className="w-3.5 h-3.5" /> VERIFICATION PENDING
@@ -20,31 +55,31 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ verdict, status, class
     );
   }
 
-  if (normalizedStatus === 'UNRESOLVED') {
+  if (normStatus === 'UNRESOLVED') {
     return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/20 ${className}`}>
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700 ${className}`}>
         <Clock className="w-3.5 h-3.5" /> UNRESOLVED
       </span>
     );
   }
 
-  if (normalizedStatus === 'CONFIRMED_FRAUD' || normalizedVerdict === 'DECLINED') {
+  if (normStatus === 'CONFIRMED_FRAUD') {
     return (
       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 ${className}`}>
-        <XCircle className="w-3.5 h-3.5" /> {normalizedStatus === 'CONFIRMED_FRAUD' ? 'CONFIRMED FRAUD' : 'DECLINED'}
+        <XCircle className="w-3.5 h-3.5" /> CONFIRMED FRAUD
       </span>
     );
   }
 
-  if (normalizedStatus === 'CLEARED' || normalizedVerdict === 'APPROVED') {
+  if (normStatus === 'CLEARED') {
     return (
       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 ${className}`}>
-        <CheckCircle2 className="w-3.5 h-3.5" /> {normalizedStatus === 'CLEARED' ? 'CLEARED' : 'APPROVED'}
+        <ShieldCheck className="w-3.5 h-3.5" /> CLEARED
       </span>
     );
   }
 
-  if (normalizedVerdict === 'NEEDS_REVIEW' || normalizedStatus === 'NEEDS_REVIEW') {
+  if (normStatus === 'NEEDS_REVIEW' || normVerdict === 'NEEDS_REVIEW') {
     return (
       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 ${className}`}>
         <AlertTriangle className="w-3.5 h-3.5" /> NEEDS REVIEW
@@ -52,17 +87,34 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ verdict, status, class
     );
   }
 
-  if (normalizedStatus === 'UNDER_INVESTIGATION' || normalizedStatus === 'INVESTIGATING') {
+  if (normVerdict === 'DECLINED') {
     return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 animate-pulse ${className}`}>
-        <RefreshCw className="w-3.5 h-3.5 animate-spin" /> UNDER INVESTIGATION
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 ${className}`}>
+        <XCircle className="w-3.5 h-3.5" /> DECLINED
+      </span>
+    );
+  }
+
+  if (normVerdict === 'APPROVED') {
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 ${className}`}>
+        <CheckCircle2 className="w-3.5 h-3.5" /> APPROVED
+      </span>
+    );
+  }
+
+  if (normStatus === 'COMPLETED' || normStatus === 'CLOSED') {
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700 ${className}`}>
+        <CheckCircle2 className="w-3.5 h-3.5" /> {normStatus}
       </span>
     );
   }
 
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700 ${className}`}>
-      <Clock className="w-3.5 h-3.5" /> {normalizedStatus || 'PENDING'}
+      <HelpCircle className="w-3.5 h-3.5" /> {normStatus || 'PENDING'}
     </span>
   );
 };
+

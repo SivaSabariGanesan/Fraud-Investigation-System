@@ -14,6 +14,24 @@ export function App() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Sync state with URL path
+  const syncRouteWithState = () => {
+    const path = window.location.pathname;
+    if (path.startsWith('/cases/')) {
+      const caseId = decodeURIComponent(path.replace('/cases/', ''));
+      if (caseId) {
+        setSelectedCaseId(caseId);
+        setActiveTab('details');
+        return;
+      }
+    }
+    if (path.startsWith('/cases')) {
+      setActiveTab('cases');
+      return;
+    }
+    setActiveTab('dashboard');
+  };
+
   const loadCases = async () => {
     setLoading(true);
     setError(null);
@@ -30,26 +48,47 @@ export function App() {
   };
 
   useEffect(() => {
+    syncRouteWithState();
     loadCases();
+
+    const handlePopState = () => {
+      syncRouteWithState();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const handleSelectCase = (caseId: string) => {
+  const navigateToDashboard = () => {
+    setActiveTab('dashboard');
+    window.history.pushState({}, '', '/dashboard');
+  };
+
+  const navigateToCases = () => {
+    setActiveTab('cases');
+    window.history.pushState({}, '', '/cases');
+  };
+
+  const navigateToCaseDetails = (caseId: string) => {
     setSelectedCaseId(caseId);
     setActiveTab('details');
+    window.history.pushState({}, '', `/cases/${caseId}`);
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      <Navbar />
+      <Navbar onSearchCase={navigateToCaseDetails} />
 
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          onNavigateDashboard={navigateToDashboard}
+          onNavigateCases={navigateToCases}
+          onNavigateDetails={(id) => navigateToCaseDetails(id || selectedCaseId || '')}
           selectedCaseId={selectedCaseId}
         />
 
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8 bg-slate-950">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-950">
           <div className="max-w-7xl mx-auto">
             {activeTab === 'dashboard' && (
               <Dashboard
@@ -57,7 +96,7 @@ export function App() {
                 loading={loading}
                 error={error}
                 onRefresh={loadCases}
-                onSelectCase={handleSelectCase}
+                onSelectCase={navigateToCaseDetails}
               />
             )}
 
@@ -67,14 +106,14 @@ export function App() {
                 loading={loading}
                 error={error}
                 onRefresh={loadCases}
-                onSelectCase={handleSelectCase}
+                onSelectCase={navigateToCaseDetails}
               />
             )}
 
             {activeTab === 'details' && selectedCaseId && (
               <CaseDetails
                 caseId={selectedCaseId}
-                onBack={() => setActiveTab('cases')}
+                onBack={navigateToCases}
                 onCaseUpdated={loadCases}
               />
             )}
