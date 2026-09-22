@@ -129,6 +129,7 @@ export interface InvestigationResult {
   evidence_requests: EvidenceRequest[];
   next_best_actions_initial: string[];
   next_best_actions_final: string[];
+  rules_evaluated: RuleEvaluationItem[];
   SAR?: {
     status?: string;
     reason?: string;

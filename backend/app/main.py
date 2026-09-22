@@ -32,6 +32,31 @@ try:
 except Exception:
     pass
 
+# ── Data integrity repair ──────────────────────────────────────────────────
+# Correct any evidence request rows whose case_id was misassigned due to test
+# cross-contamination (e.g., ER-HHG-003-001 stored under TEST-ER-CREDS).
+# This is a one-time idempotent repair that runs on every startup.
+_KNOWN_REQUEST_CASE_MAP = {
+    "ER-HHG-003-001": "HHG-003",
+}
+try:
+    _repair_db = SessionLocal()
+    for _req_id, _correct_case_id in _KNOWN_REQUEST_CASE_MAP.items():
+        _er = _repair_db.query(EvidenceRequestModel).filter(
+            EvidenceRequestModel.request_id == _req_id
+        ).first()
+        if _er and _er.case_id != _correct_case_id:
+            logger.warning(
+                "Startup repair: correcting case_id for %s from %r to %r",
+                _req_id, _er.case_id, _correct_case_id,
+            )
+            _er.case_id = _correct_case_id
+            _er.updated_at = datetime.utcnow()
+            _repair_db.commit()
+    _repair_db.close()
+except Exception as _repair_exc:
+    logger.warning("Startup data-integrity repair failed: %s", _repair_exc)
+
 app = FastAPI(
     title=settings.APP_NAME,
     version="1.0.0",

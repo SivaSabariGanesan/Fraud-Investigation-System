@@ -419,10 +419,16 @@ def sync_tigergraph_requests(
     Ensures TigerGraph EvidenceRequest vertices (e.g., ER-HHG-003-001) have a
     corresponding SQLite row so they participate in the lifecycle workflow.
 
-    - Only inserts rows that don't already exist (idempotent).
-    - Never overwrites status, response, or any lifecycle field on existing rows.
-    - This guarantees HHG-003 / ER-HHG-003-001 remains PENDING even after
-      multiple investigation runs.
+    Idempotency rules:
+    - If a row exists with the CORRECT case_id → skip (never overwrite lifecycle state).
+    - If a row exists with the WRONG case_id → correct the case_id so the request
+      is queryable by the right case. This can happen when a test run accidentally
+      seeds a TigerGraph request under a test case_id.
+    - If no row exists → insert a new PENDING row.
+
+    This guarantees HHG-003 / ER-HHG-003-001 remains PENDING even after
+    multiple investigation runs, and is always returned by
+    GET /api/evidence-requests/HHG-003.
     """
     for req in tg_requests:
         req_id = req.get("id") or req.get("request_id")
@@ -434,7 +440,21 @@ def sync_tigergraph_requests(
         ).first()
 
         if existing:
-            # Never overwrite lifecycle state — idempotent
+            if existing.case_id != case_id:
+                # Correct a misassigned case_id (e.g. from a test run cross-contamination)
+                # Only fix case_id — never touch status, response, or any lifecycle field.
+                logger.warning(
+                    "sync_tigergraph_requests: correcting case_id for %s from %r to %r",
+                    req_id, existing.case_id, case_id,
+                )
+                existing.case_id = case_id
+                existing.updated_at = datetime.utcnow()
+                try:
+                    db.commit()
+                except Exception as exc:
+                    db.rollback()
+                    logger.warning("sync case_id correction commit failed for %s: %s", req_id, exc)
+            # Either already correct, or just corrected — do not overwrite lifecycle fields
             continue
 
         now = datetime.utcnow()

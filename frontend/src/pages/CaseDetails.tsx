@@ -937,6 +937,81 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
             </div>
           </div>
         )}
+
+        {/* Live R1–R10 Rule Evaluation Grid */}
+        {investigation?.rules_evaluated && investigation.rules_evaluated.length > 0 && (
+          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-indigo-300 uppercase tracking-wider flex items-center gap-2">
+                <Scale className="w-3.5 h-3.5" /> R1–R10 Rule Evaluation
+              </span>
+              <div className="flex items-center gap-3 text-[10px] font-mono">
+                <span className="flex items-center gap-1 text-amber-400">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> TRIGGERED
+                </span>
+                <span className="flex items-center gap-1 text-slate-500">
+                  <span className="w-2 h-2 rounded-full bg-slate-600 inline-block" /> PASSED
+                </span>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {investigation.rules_evaluated.map((rule) => {
+                const triggered = rule.triggered === true;
+                const severity = (rule.severity || '').toUpperCase();
+                const severityColor =
+                  severity === 'CRITICAL' ? 'text-rose-400' :
+                  severity === 'HIGH'     ? 'text-orange-400' :
+                  severity === 'MEDIUM'   ? 'text-amber-400' :
+                  severity === 'INFO'     ? 'text-slate-400' : 'text-slate-400';
+                return (
+                  <div
+                    key={rule.rule_id}
+                    className={`p-2.5 rounded-lg border text-xs space-y-1 transition ${
+                      triggered
+                        ? 'bg-amber-500/10 border-amber-500/30'
+                        : 'bg-slate-900/60 border-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between font-mono font-bold">
+                      <div className="flex items-center gap-2">
+                        <span className={triggered ? 'text-amber-300' : 'text-slate-400'}>
+                          {rule.rule_id}
+                        </span>
+                        {rule.rule_name && (
+                          <span className="text-[10px] font-sans font-normal text-slate-500 truncate max-w-[140px]">
+                            {rule.rule_name.replace(/_/g, ' ')}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {severity && severity !== '' && (
+                          <span className={`text-[10px] font-sans ${severityColor}`}>{severity}</span>
+                        )}
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-sans border ${
+                            triggered
+                              ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                              : 'bg-slate-800 text-slate-500 border-slate-700'
+                          }`}
+                        >
+                          {triggered ? 'TRIGGERED' : 'PASSED'}
+                        </span>
+                      </div>
+                    </div>
+                    {rule.description && (
+                      <p className={`text-[11px] leading-snug ${triggered ? 'text-amber-200/80' : 'text-slate-500'}`}>
+                        {rule.description}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-slate-600 font-mono pt-1">
+              R1–R10 are deterministic policy rules. LLM reasoning informs but does not override them.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* ==================================================
