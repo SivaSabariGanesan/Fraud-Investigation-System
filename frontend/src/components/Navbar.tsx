@@ -14,11 +14,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchCase }) => {
     const check = async () => {
       try {
         const res = await apiService.checkHealth();
-        if (res.status === 'ok') {
-          setBackendStatus('online');
-        } else {
-          setBackendStatus('offline');
-        }
+        setBackendStatus(res.status === 'ok' ? 'online' : 'offline');
       } catch {
         setBackendStatus('offline');
       }
@@ -37,60 +33,111 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchCase }) => {
   };
 
   return (
-    <header className="h-14 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50 flex items-center justify-between px-5">
+    <header
+      className="h-12 sticky top-0 z-50 flex items-center justify-between px-4"
+      style={{
+        background: 'var(--bg-base)',
+        borderBottom: '1px solid var(--border-default)',
+      }}
+    >
       {/* Brand */}
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-          <ShieldAlert className="w-4 h-4" />
+      <div className="flex items-center gap-2.5">
+        <div
+          className="w-7 h-7 rounded flex items-center justify-center"
+          style={{ background: 'var(--accent)', flexShrink: 0 }}
+        >
+          <ShieldAlert className="w-3.5 h-3.5 text-white" />
         </div>
-        <div className="flex items-center gap-2.5">
-          <span className="font-semibold text-slate-100 text-sm tracking-tight">Sentinel</span>
-          <span className="text-slate-600 text-xs">/</span>
-          <span className="text-xs font-medium text-slate-400">Fraud Operations</span>
-        </div>
+        <span
+          className="text-sm font-semibold tracking-tight"
+          style={{ color: 'var(--text-primary)' }}
+        >
+          Sentinel
+        </span>
+        <span
+          className="text-xs font-medium px-1.5 py-0.5 rounded"
+          style={{
+            background: 'var(--bg-raised)',
+            color: 'var(--text-muted)',
+            border: '1px solid var(--border-default)',
+            letterSpacing: '0.02em',
+          }}
+        >
+          Fraud Ops
+        </span>
       </div>
 
-      {/* Global Search Bar */}
-      <form onSubmit={handleSearchSubmit} className="hidden md:flex items-center relative w-80">
-        <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 pointer-events-none" />
+      {/* Search */}
+      <form onSubmit={handleSearchSubmit} className="hidden md:flex items-center relative">
+        <Search
+          className="w-3 h-3 absolute left-2.5 pointer-events-none"
+          style={{ color: 'var(--text-muted)' }}
+        />
         <input
           type="text"
-          placeholder="Search Case ID or Customer..."
+          placeholder="Jump to case ID..."
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          className="w-full bg-slate-900/80 border border-slate-800 rounded-lg pl-8 pr-12 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/30 transition"
+          className="input-base"
+          style={{ width: 260, paddingLeft: 28, paddingRight: 40, paddingTop: 5, paddingBottom: 5 }}
         />
-        <kbd className="absolute right-2.5 top-2 text-[10px] font-mono text-slate-500 bg-slate-800/60 border border-slate-700/50 px-1.5 py-0.5 rounded">
+        <kbd
+          className="absolute right-2.5 text-[10px] font-mono px-1 rounded"
+          style={{
+            color: 'var(--text-muted)',
+            background: 'var(--bg-overlay)',
+            border: '1px solid var(--border-default)',
+          }}
+        >
           /
         </kbd>
       </form>
 
-      {/* Status & Analyst Profile */}
-      <div className="flex items-center gap-3">
-        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-[11px] text-slate-400">
+      {/* Right side */}
+      <div className="flex items-center gap-2">
+        {/* Backend status */}
+        <div
+          className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px]"
+          style={{
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-default)',
+            color: 'var(--text-muted)',
+          }}
+        >
           {backendStatus === 'checking' && (
             <>
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+              <span
+                className="w-1.5 h-1.5 rounded-full animate-pulse"
+                style={{ background: 'var(--warn)' }}
+              />
               <span>Connecting</span>
             </>
           )}
           {backendStatus === 'online' && (
             <>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-              <span className="text-slate-300">Live Services</span>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--success)' }} />
+              <span style={{ color: 'var(--text-secondary)' }}>Live</span>
             </>
           )}
           {backendStatus === 'offline' && (
             <>
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
-              <span className="text-rose-400">Disconnected</span>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--danger)' }} />
+              <span style={{ color: 'var(--danger-text)' }}>Offline</span>
             </>
           )}
         </div>
 
-        <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300">
-          <UserCheck className="w-3.5 h-3.5 text-indigo-400" />
-          <span className="font-medium text-slate-300">Analyst</span>
+        {/* Analyst badge */}
+        <div
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium"
+          style={{
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-default)',
+            color: 'var(--text-secondary)',
+          }}
+        >
+          <UserCheck className="w-3 h-3" style={{ color: 'var(--accent-text)' }} />
+          <span>Analyst</span>
         </div>
       </div>
     </header>

@@ -1,12 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Case,
-  InvestigationResult,
-  EvidenceItem,
-  EvidenceRequest,
-  EvidenceRequestCreatePayload,
-  InvestigationHistoryItem,
-  AuditEventItem,
+  Case, InvestigationResult, EvidenceItem, EvidenceRequest,
+  EvidenceRequestCreatePayload, InvestigationHistoryItem, AuditEventItem,
 } from '../types/investigation';
 import { StatusBadge } from '../components/StatusBadge';
 import { InvestigationHistoryModal } from '../components/InvestigationHistoryModal';
@@ -14,26 +9,9 @@ import { AuditTimeline } from '../components/AuditTimeline';
 import { apiService } from '../services/api';
 import { formatCurrency, formatDate } from '../lib/utils';
 import {
-  ArrowLeft,
-  RefreshCw,
-  Play,
-  Send,
-  Plus,
-  CreditCard,
-  Smartphone,
-  FileText,
-  XCircle,
-  ExternalLink,
-  Layers,
-  Cpu,
-  Scale,
-  MessageSquare,
-  Activity,
-  ChevronDown,
-  ChevronUp,
-  Clock,
-  ListChecks,
-  FileWarning,
+  ArrowLeft, RefreshCw, Play, Send, Plus, CreditCard, Smartphone,
+  FileText, AlertCircle, Layers, Cpu, Scale, Activity, Clock,
+  ListChecks, FileWarning, ChevronDown, ChevronUp,
 } from 'lucide-react';
 
 interface CaseDetailsProps {
@@ -44,6 +22,33 @@ interface CaseDetailsProps {
 
 type WorkbenchTab = 'overview' | 'policy' | 'requests' | 'audit';
 
+/* ── Shared inline-style helpers ─────────────────────────── */
+const card: React.CSSProperties = {
+  background: 'var(--bg-surface)',
+  border: '1px solid var(--border-default)',
+  borderRadius: 6,
+};
+
+const tableHeaderCell: React.CSSProperties = {
+  padding: '8px 14px',
+  fontSize: 10,
+  fontWeight: 600,
+  letterSpacing: '0.07em',
+  textTransform: 'uppercase',
+  color: 'var(--text-muted)',
+  background: 'var(--bg-raised)',
+  borderBottom: '1px solid var(--border-default)',
+  whiteSpace: 'nowrap',
+};
+
+const tableCell: React.CSSProperties = {
+  padding: '9px 14px',
+  borderBottom: '1px solid var(--border-subtle)',
+  fontSize: 12,
+  color: 'var(--text-secondary)',
+};
+
+/* ── Component ───────────────────────────────────────────── */
 export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCaseUpdated }) => {
   const [activeTab, setActiveTab] = useState<WorkbenchTab>('overview');
   const [caseData, setCaseData] = useState<Case | null>(null);
@@ -51,11 +56,11 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
   const [historyRuns, setHistoryRuns] = useState<InvestigationHistoryItem[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditEventItem[]>([]);
   const [selectedInvestigationId, setSelectedInvestigationId] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [investigating, setInvestigating] = useState<boolean>(false);
+  const [loading, setLoading] = useState(true);
+  const [investigating, setInvestigating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Evidence Request state
+  // Evidence Requests
   const [liveRequests, setLiveRequests] = useState<EvidenceRequest[]>([]);
   const [erLoading, setErLoading] = useState(false);
   const [erError, setErError] = useState<string | null>(null);
@@ -79,7 +84,7 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
       const reqs = await apiService.getEvidenceRequests(caseId);
       setLiveRequests(reqs);
     } catch {
-      setErError('Could not load evidence requests from backend.');
+      setErError('Could not load evidence requests.');
     } finally {
       setErLoading(false);
     }
@@ -96,8 +101,6 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
         const historyData = await apiService.getCaseInvestigations(caseId);
         const runs = historyData.investigations || [];
         setHistoryRuns(runs);
-
-        // Auto-load latest historical snapshot if available
         if (runs.length > 0) {
           try {
             const detail = await apiService.getInvestigation(runs[0].investigation_id);
@@ -120,25 +123,16 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
               next_best_actions_initial: detail.actions_initial || [],
               next_best_actions_final: detail.actions_final || [],
               rules_evaluated: detail.rules || [],
-              SAR: {
-                status: detail.sar_status || undefined,
-                reason: detail.sar_reason || undefined,
-              },
+              SAR: { status: detail.sar_status || undefined, reason: detail.sar_reason || undefined },
               stop_reason: detail.stop_reason,
-              tokens: detail.total_tokens ? {
-                prompt: detail.prompt_tokens || 0,
-                completion: detail.completion_tokens || 0,
-                total: detail.total_tokens || 0,
-              } : undefined,
+              tokens: detail.total_tokens ? { prompt: detail.prompt_tokens || 0, completion: detail.completion_tokens || 0, total: detail.total_tokens || 0 } : undefined,
               latency: detail.llm_latency || undefined,
               evidence_count: detail.evidence?.length,
               reasoning_summary: detail.reasoning_summary,
               created_at: detail.created_at,
               updated_at: detail.completed_at || detail.created_at,
             });
-          } catch (e) {
-            console.error('Failed to auto-load latest historical snapshot:', e);
-          }
+          } catch {}
         }
       } catch {
         setHistoryRuns([]);
@@ -151,8 +145,7 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
         setAuditEvents([]);
       }
     } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : 'Unable to connect to investigation service.';
-      setError(errorMsg);
+      setError(err instanceof Error ? err.message : 'Unable to connect to investigation service.');
     } finally {
       setLoading(false);
     }
@@ -180,23 +173,12 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
         updated_at: result.updated_at || new Date().toISOString(),
         customer_id: result.customer_id || caseData?.customer_id,
       });
-
-      try {
-        const historyData = await apiService.getCaseInvestigations(caseId);
-        setHistoryRuns(historyData.investigations || []);
-      } catch {}
-
-      try {
-        const auditData = await apiService.getCaseAuditTimeline(caseId);
-        setAuditEvents(auditData || []);
-      } catch {}
-
+      try { const h = await apiService.getCaseInvestigations(caseId); setHistoryRuns(h.investigations || []); } catch {}
+      try { const a = await apiService.getCaseAuditTimeline(caseId); setAuditEvents(a || []); } catch {}
       await fetchEvidenceRequests();
-
       if (onCaseUpdated) onCaseUpdated();
     } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : 'Unable to run investigation. Check backend connection.';
-      setError(errorMsg);
+      setError(err instanceof Error ? err.message : 'Unable to run investigation.');
     } finally {
       setInvestigating(false);
     }
@@ -210,20 +192,13 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
     setCreateSubmitting(true);
     setErError(null);
     try {
-      await apiService.createEvidenceRequest(caseId, {
-        ...createPayload,
-        request_text: createPayload.request_text.trim(),
-      });
+      await apiService.createEvidenceRequest(caseId, { ...createPayload, request_text: createPayload.request_text.trim() });
       setShowCreateForm(false);
       setCreatePayload({ request_type: 'customer_verification', request_text: '' });
       await fetchEvidenceRequests();
-      try {
-        const auditData = await apiService.getCaseAuditTimeline(caseId);
-        setAuditEvents(auditData || []);
-      } catch {}
+      try { const a = await apiService.getCaseAuditTimeline(caseId); setAuditEvents(a || []); } catch {}
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to create evidence request.';
-      setErError(msg);
+      setErError(err instanceof Error ? err.message : 'Failed to create evidence request.');
     } finally {
       setCreateSubmitting(false);
     }
@@ -231,293 +206,245 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
 
   const handleRespond = async (requestId: string) => {
     const text = (respondText[requestId] || '').trim();
-    if (!text) {
-      setRequestActionResult(prev => ({ ...prev, [requestId]: 'Response text must not be empty.' }));
-      return;
-    }
-    setRespondSubmitting(prev => ({ ...prev, [requestId]: true }));
-    setRequestActionResult(prev => ({ ...prev, [requestId]: '' }));
+    if (!text) { setRequestActionResult(p => ({ ...p, [requestId]: 'Response text is required.' })); return; }
+    setRespondSubmitting(p => ({ ...p, [requestId]: true }));
+    setRequestActionResult(p => ({ ...p, [requestId]: '' }));
     try {
-      const result = await apiService.respondToEvidenceRequest(requestId, {
-        response: text,
-        response_source: respondSource[requestId] || 'CUSTOMER',
-      });
-      let msg = `Response recorded. Status → RESPONDED.`;
-      if (result.investigation_triggered && result.new_investigation_id) {
-        msg += ` New investigation triggered: ${result.new_investigation_id}.`;
-      }
-      setRequestActionResult(prev => ({ ...prev, [requestId]: msg }));
-      setRespondText(prev => ({ ...prev, [requestId]: '' }));
+      const result = await apiService.respondToEvidenceRequest(requestId, { response: text, response_source: respondSource[requestId] || 'CUSTOMER' });
+      let msg = 'Response recorded.';
+      if (result.investigation_triggered && result.new_investigation_id) msg += ` Re-investigation triggered: ${result.new_investigation_id}`;
+      setRequestActionResult(p => ({ ...p, [requestId]: msg }));
+      setRespondText(p => ({ ...p, [requestId]: '' }));
       setExpandedRequestId(null);
       await fetchEvidenceRequests();
       await fetchDetails();
       if (onCaseUpdated) onCaseUpdated();
     } catch (err: unknown) {
-      const errMsg = (err as any)?.response?.data?.detail || (err instanceof Error ? err.message : 'Failed to record response.');
-      setRequestActionResult(prev => ({ ...prev, [requestId]: `Error: ${errMsg}` }));
+      setRequestActionResult(p => ({ ...p, [requestId]: `Error: ${(err as any)?.response?.data?.detail || (err instanceof Error ? err.message : 'Failed.')}` }));
     } finally {
-      setRespondSubmitting(prev => ({ ...prev, [requestId]: false }));
+      setRespondSubmitting(p => ({ ...p, [requestId]: false }));
     }
   };
 
   const handleCancel = async (requestId: string) => {
     if (!window.confirm(`Cancel evidence request ${requestId}?`)) return;
-    setCancelSubmitting(prev => ({ ...prev, [requestId]: true }));
-    setRequestActionResult(prev => ({ ...prev, [requestId]: '' }));
+    setCancelSubmitting(p => ({ ...p, [requestId]: true }));
+    setRequestActionResult(p => ({ ...p, [requestId]: '' }));
     try {
       await apiService.cancelEvidenceRequest(requestId, { cancelled_reason: 'Cancelled by analyst.' });
-      setRequestActionResult(prev => ({ ...prev, [requestId]: 'Request cancelled.' }));
+      setRequestActionResult(p => ({ ...p, [requestId]: 'Request cancelled.' }));
       await fetchEvidenceRequests();
-      try {
-        const auditData = await apiService.getCaseAuditTimeline(caseId);
-        setAuditEvents(auditData || []);
-      } catch {}
+      try { const a = await apiService.getCaseAuditTimeline(caseId); setAuditEvents(a || []); } catch {}
     } catch (err: unknown) {
-      const errMsg = (err as any)?.response?.data?.detail || (err instanceof Error ? err.message : 'Failed to cancel request.');
-      setRequestActionResult(prev => ({ ...prev, [requestId]: `Error: ${errMsg}` }));
+      setRequestActionResult(p => ({ ...p, [requestId]: `Error: ${(err as any)?.response?.data?.detail || (err instanceof Error ? err.message : 'Failed.')}` }));
     } finally {
-      setCancelSubmitting(prev => ({ ...prev, [requestId]: false }));
+      setCancelSubmitting(p => ({ ...p, [requestId]: false }));
     }
   };
 
+  /* ── Derived data ──────────────────────────────────────── */
+  const evidenceList: EvidenceItem[] = investigation?.evidence || [];
+  const txnEvs   = evidenceList.filter((e) => e.type === 'Transaction' || e.type === 'TransactionNode');
+  const cardEvs  = evidenceList.filter((e) => e.type === 'Card');
+  const devEvs   = evidenceList.filter((e) => e.type === 'DeviceProfile' || e.type === 'Device');
+  const emailEvs = evidenceList.filter((e) => e.type === 'EmailDomain');
+  const billingEvs = evidenceList.filter((e) => e.type === 'BillingRegion');
+  const pendingCount = liveRequests.filter((r) => r.status === 'PENDING').length;
+
+  /* ── Loading state ─────────────────────────────────────── */
   if (loading) {
     return (
-      <div className="py-24 text-center text-slate-400 space-y-3">
-        <RefreshCw className="w-6 h-6 animate-spin mx-auto text-indigo-400" />
-        <p className="text-xs font-mono">Loading case data...</p>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '80px 0', color: 'var(--text-muted)' }}>
+        <RefreshCw className="w-5 h-5 animate-spin" style={{ color: 'var(--accent-text)' }} />
+        <span style={{ fontSize: 12, fontFamily: 'monospace' }}>Loading case…</span>
       </div>
     );
   }
 
-  // Entities & Evidence lists
-  const evidenceList: EvidenceItem[] = investigation?.evidence || [];
-  const txnEvs = evidenceList.filter((e) => e.type === 'Transaction' || e.type === 'TransactionNode');
-  const cardEvs = evidenceList.filter((e) => e.type === 'Card');
-  const devEvs = evidenceList.filter((e) => e.type === 'DeviceProfile' || e.type === 'Device');
-  const emailEvs = evidenceList.filter((e) => e.type === 'EmailDomain');
-  const billingEvs = evidenceList.filter((e) => e.type === 'BillingRegion');
+  /* ── Input style ───────────────────────────────────────── */
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    background: 'var(--bg-base)',
+    border: '1px solid var(--border-default)',
+    borderRadius: 5,
+    fontSize: 12,
+    color: 'var(--text-primary)',
+    padding: '6px 10px',
+    outline: 'none',
+  };
 
-  const pendingRequestsCount = liveRequests.filter(r => r.status === 'PENDING').length;
+  const selectStyle: React.CSSProperties = {
+    ...inputStyle,
+    cursor: 'pointer',
+  };
 
+  /* ── Render ────────────────────────────────────────────── */
   return (
-    <div className="space-y-4">
-      {/* Top Breadcrumb & Action Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800/80">
-        <div className="flex items-center gap-3">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+      {/* ── Header ────────────────────────────────────────── */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 12,
+          paddingBottom: 14,
+          borderBottom: '1px solid var(--border-default)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <button
             onClick={onBack}
-            className="p-1.5 rounded-md text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition"
-            title="Back to directory"
+            className="btn btn-ghost"
+            style={{ padding: '5px 8px', marginTop: 1 }}
+            aria-label="Back to cases"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <div className="flex items-center gap-2.5">
-              <h1 className="text-lg font-bold tracking-tight text-slate-100 font-mono">{caseId}</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+              <span style={{ fontSize: 16, fontWeight: 700, fontFamily: 'monospace', color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+                {caseId}
+              </span>
               <StatusBadge status={caseData?.status} verdict={caseData?.verdict} />
-              {caseData?.verdict && (
-                <StatusBadge verdict={caseData.verdict} showVerdict={true} />
-              )}
+              {caseData?.verdict && <StatusBadge verdict={caseData.verdict} showVerdict />}
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Customer: <span className="font-mono text-slate-200">{caseData?.customer_id || 'C08623'}</span>
-              <span className="mx-2 text-slate-600">·</span>
-              Exposure: <span className="font-mono text-slate-200 font-medium">{formatCurrency(caseData?.exposure || 0)}</span>
+            <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>
+              Customer:{' '}
+              <span style={{ fontFamily: 'monospace', color: 'var(--text-secondary)' }}>
+                {caseData?.customer_id || 'C08623'}
+              </span>
+              <span style={{ margin: '0 8px', color: 'var(--border-strong)' }}>·</span>
+              Exposure:{' '}
+              <span style={{ fontFamily: 'monospace', color: 'var(--text-primary)', fontWeight: 600 }}>
+                {formatCurrency(caseData?.exposure || 0)}
+              </span>
             </p>
           </div>
         </div>
 
-        {/* Header Action Buttons */}
-        <div className="flex items-center gap-2">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <button
+            className="btn btn-ghost"
+            style={{ padding: '5px 8px' }}
             onClick={() => { fetchDetails(); fetchEvidenceRequests(); }}
-            className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition text-xs"
-            title="Refresh case state"
+            title="Refresh"
           >
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
-
           <button
-            onClick={() => {
-              setActiveTab('requests');
-              setShowCreateForm(true);
-            }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 text-xs font-medium transition"
+            className="btn btn-ghost"
+            onClick={() => { setActiveTab('requests'); setShowCreateForm(true); }}
           >
-            <Plus className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Request Evidence</span>
+            <Plus className="w-3.5 h-3.5" style={{ color: 'var(--accent-text)' }} />
+            Request Evidence
           </button>
-
           <button
+            className="btn btn-primary"
             onClick={handleRunInvestigation}
             disabled={investigating}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition shadow-sm disabled:opacity-50"
           >
             {investigating ? (
-              <>
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                <span>Running Agent...</span>
-              </>
+              <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Running…</>
             ) : (
-              <>
-                <Play className="w-3.5 h-3.5 fill-current" />
-                <span>Run Agent Investigation</span>
-              </>
+              <><Play className="w-3.5 h-3.5" style={{ fill: 'currentColor' }} /> Run Agent Investigation</>
             )}
           </button>
         </div>
       </div>
 
-      {/* Global Error Banner */}
+      {/* ── Error banner ──────────────────────────────────── */}
       {error && (
-        <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center justify-between">
-          <div className="flex items-center gap-2 font-medium">
-            <XCircle className="w-4 h-4 text-rose-400 shrink-0" />
-            <span>{error}</span>
-          </div>
-          <button onClick={() => setError(null)} className="text-slate-400 hover:text-slate-200">✕</button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--danger-subtle)', border: '1px solid var(--danger-border)', borderRadius: 6, fontSize: 12, color: 'var(--danger-text)' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <AlertCircle className="w-4 h-4" style={{ flexShrink: 0 }} />
+            {error}
+          </span>
+          <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 14 }}>✕</button>
         </div>
       )}
 
-      {/* Quick Stats Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-        <div className="p-3 rounded-lg bg-slate-900/60 border border-slate-800/80">
-          <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider block">Decision State</span>
-          <span className="text-xs font-semibold text-slate-200 mt-1 block">
-            {caseData?.verdict || 'NEEDS_REVIEW'}
-          </span>
-        </div>
-
-        <div className="p-3 rounded-lg bg-slate-900/60 border border-slate-800/80">
-          <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider block">Identified Pattern</span>
-          <span className="text-xs text-slate-200 mt-1 block truncate">
-            {caseData?.pattern || 'Customer Verification Pending'}
-          </span>
-        </div>
-
-        <div className="p-3 rounded-lg bg-slate-900/60 border border-slate-800/80">
-          <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider block">Total Exposure</span>
-          <span className="text-xs font-mono font-semibold text-slate-200 mt-1 block">
-            {formatCurrency(caseData?.exposure || 0)}
-          </span>
-        </div>
-
-        <div className="p-3 rounded-lg bg-slate-900/60 border border-slate-800/80">
-          <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider block">Evidence Requests</span>
-          <span className="text-xs font-semibold mt-1 block flex items-center gap-1.5">
-            <span className={pendingRequestsCount > 0 ? 'text-amber-400' : 'text-slate-400'}>
-              {pendingRequestsCount} Pending
-            </span>
-            <span className="text-slate-500 font-normal">({liveRequests.length} total)</span>
-          </span>
-        </div>
-
-        <div className="p-3 rounded-lg bg-slate-900/60 border border-slate-800/80">
-          <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider block">Workflow Stop</span>
-          <span className="text-xs font-mono text-amber-300 mt-1 block truncate">
-            {investigation?.stop_reason || (pendingRequestsCount > 0 ? 'PENDING_EVIDENCE_RESPONSE' : 'COMPLETE')}
-          </span>
-        </div>
+      {/* ── Quick Stats Strip ─────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 8 }}>
+        {[
+          { label: 'Decision State', value: caseData?.verdict || 'NEEDS_REVIEW', mono: true },
+          { label: 'Pattern', value: caseData?.pattern || 'Verification Pending', truncate: true },
+          { label: 'Exposure', value: formatCurrency(caseData?.exposure || 0), mono: true, bold: true },
+          {
+            label: 'Evidence Requests',
+            value: `${pendingCount} pending`,
+            sub: `${liveRequests.length} total`,
+            warnColor: pendingCount > 0,
+          },
+          {
+            label: 'Workflow Stop',
+            value: investigation?.stop_reason || (pendingCount > 0 ? 'PENDING_EVIDENCE' : 'COMPLETE'),
+            mono: true,
+            warnColor: !!(investigation?.stop_reason || pendingCount > 0),
+          },
+        ].map(({ label, value, mono, bold, truncate, sub, warnColor }) => (
+          <div key={label} style={{ ...card, padding: '10px 12px' }}>
+            <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+              {label}
+            </p>
+            <p style={{
+              margin: 0,
+              fontSize: 11,
+              fontFamily: mono ? 'monospace' : undefined,
+              fontWeight: bold ? 600 : 500,
+              color: warnColor ? 'var(--warn-text)' : 'var(--text-primary)',
+              overflow: truncate ? 'hidden' : undefined,
+              textOverflow: truncate ? 'ellipsis' : undefined,
+              whiteSpace: truncate ? 'nowrap' : undefined,
+            }}>
+              {value}
+            </p>
+            {sub && <p style={{ margin: '2px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>{sub}</p>}
+          </div>
+        ))}
       </div>
 
-      {/* Workbench Tab Navigation */}
-      <div className="flex border-b border-slate-800/80 gap-1 text-xs">
-        <button
-          onClick={() => setActiveTab('overview')}
-          className={`px-4 py-2 font-medium border-b-2 transition -mb-px flex items-center gap-1.5 ${
-            activeTab === 'overview'
-              ? 'border-indigo-500 text-indigo-400 font-semibold'
-              : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
-          }`}
-        >
-          <Activity className="w-3.5 h-3.5" />
-          <span>Transactions & Evidence</span>
-          <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-mono">
-            {txnEvs.length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('policy')}
-          className={`px-4 py-2 font-medium border-b-2 transition -mb-px flex items-center gap-1.5 ${
-            activeTab === 'policy'
-              ? 'border-indigo-500 text-indigo-400 font-semibold'
-              : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
-          }`}
-        >
-          <Scale className="w-3.5 h-3.5" />
-          <span>Intelligence & Policy</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('requests')}
-          className={`px-4 py-2 font-medium border-b-2 transition -mb-px flex items-center gap-1.5 ${
-            activeTab === 'requests'
-              ? 'border-indigo-500 text-indigo-400 font-semibold'
-              : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
-          }`}
-        >
-          <Send className="w-3.5 h-3.5" />
-          <span>Evidence Requests</span>
-          {pendingRequestsCount > 0 && (
-            <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full bg-amber-500/10 text-amber-400 font-mono border border-amber-500/20">
-              {pendingRequestsCount}
-            </span>
-          )}
-        </button>
-
-        <button
-          onClick={() => setActiveTab('audit')}
-          className={`px-4 py-2 font-medium border-b-2 transition -mb-px flex items-center gap-1.5 ${
-            activeTab === 'audit'
-              ? 'border-indigo-500 text-indigo-400 font-semibold'
-              : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
-          }`}
-        >
-          <Clock className="w-3.5 h-3.5" />
-          <span>Runs & Audit Log</span>
-          <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-mono">
-            {historyRuns.length}
-          </span>
-        </button>
+      {/* ── Tab Navigation ────────────────────────────────── */}
+      <div className="tab-nav">
+        <TabItem icon={<Activity className="w-3.5 h-3.5" />} label="Transactions & Evidence" badge={txnEvs.length || undefined} active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} />
+        <TabItem icon={<Scale className="w-3.5 h-3.5" />} label="Intelligence & Policy" active={activeTab === 'policy'} onClick={() => setActiveTab('policy')} />
+        <TabItem icon={<Send className="w-3.5 h-3.5" />} label="Evidence Requests" badge={pendingCount || undefined} badgeWarn active={activeTab === 'requests'} onClick={() => setActiveTab('requests')} />
+        <TabItem icon={<Clock className="w-3.5 h-3.5" />} label="Runs & Audit" badge={historyRuns.length || undefined} active={activeTab === 'audit'} onClick={() => setActiveTab('audit')} />
       </div>
 
-      {/* ==================================================
-          TAB 1: OVERVIEW & EVIDENCE
-          ================================================== */}
+      {/* ══════════════════════════════════════════════════════
+          TAB 1 — TRANSACTIONS & EVIDENCE
+          ══════════════════════════════════════════════════════ */}
       {activeTab === 'overview' && (
-        <div className="space-y-4">
-          {/* Flagged Transactions Table */}
-          <div className="rounded-lg border border-slate-800/80 bg-slate-900/50 overflow-hidden">
-            <div className="px-4 py-3 border-b border-slate-800/80 flex items-center justify-between">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+          {/* Transactions table */}
+          <div style={{ ...card, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border-default)' }}>
               <div>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">Observed Transactions</h3>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  Transactions normalized from TigerGraph Cloud FraudGraph schema.
-                </p>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>Observed Transactions</span>
+                <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>Normalized from TigerGraph Cloud FraudGraph</p>
               </div>
-              <span className="text-[11px] font-mono text-slate-400">
-                {txnEvs.length} transactions · Total {formatCurrency(caseData?.exposure || 0)}
+              <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--text-muted)' }}>
+                {txnEvs.length} txns · {formatCurrency(caseData?.exposure || 0)}
               </span>
             </div>
-
             {txnEvs.length === 0 ? (
-              <div className="p-6 text-center text-slate-500 text-xs font-mono">
-                No transaction records returned for this case. Click "Run Agent Investigation" to query the graph.
+              <div style={{ padding: '32px 14px', textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                No transactions loaded. Run Agent Investigation to query the graph.
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-slate-300">
-                  <thead className="bg-slate-950/80 text-[10px] font-medium uppercase text-slate-400 border-b border-slate-800">
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead>
                     <tr>
-                      <th className="py-2.5 px-4">Transaction ID</th>
-                      <th className="py-2.5 px-4">Timestamp</th>
-                      <th className="py-2.5 px-4">Channel / Product</th>
-                      <th className="py-2.5 px-4 text-right">Risk Signal</th>
-                      <th className="py-2.5 px-4 text-right">Amount</th>
+                      {['Transaction ID', 'Timestamp', 'Channel / Product', 'Risk Signal', 'Amount'].map((h, i) => (
+                        <th key={i} style={{ ...tableHeaderCell, textAlign: i >= 3 ? 'right' : 'left' }}>{h}</th>
+                      ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60 font-mono">
+                  <tbody>
                     {txnEvs.map((t, idx) => {
                       const raw = t.raw_data || t.details || {};
                       const txnId = t.transaction_id || raw.transaction_id || t.evidence_id || `Txn #${idx + 1}`;
@@ -529,39 +456,29 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
                       let formattedTs = 'Recorded in Graph';
                       if (rawTs) {
                         try {
-                          const dateObj = typeof rawTs === 'number' ? new Date(rawTs > 1e11 ? rawTs : rawTs * 1000) : new Date(rawTs);
-                          if (!isNaN(dateObj.getTime())) formattedTs = formatDate(dateObj.toISOString());
+                          const d = typeof rawTs === 'number' ? new Date(rawTs > 1e11 ? rawTs : rawTs * 1000) : new Date(rawTs);
+                          if (!isNaN(d.getTime())) formattedTs = formatDate(d.toISOString());
                         } catch {}
                       }
-
+                      const highRisk = riskSignal !== null && Number(riskSignal) > 0.4;
                       return (
-                        <tr key={idx} className="hover:bg-slate-800/30 transition">
-                          <td className="py-2.5 px-4 font-semibold text-indigo-300">
-                            {txnId}
-                          </td>
-                          <td className="py-2.5 px-4 text-slate-400 text-[11px] font-sans">
-                            {formattedTs}
-                          </td>
-                          <td className="py-2.5 px-4 font-sans text-slate-300">
-                            <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px] font-mono mr-1.5">
+                        <tr key={idx} className="row-hover">
+                          <td style={{ ...tableCell, fontFamily: 'monospace', fontWeight: 600, color: 'var(--accent-text)' }}>{txnId}</td>
+                          <td style={{ ...tableCell, fontFamily: 'monospace', fontSize: 11, color: 'var(--text-muted)' }}>{formattedTs}</td>
+                          <td style={{ ...tableCell }}>
+                            <span style={{ background: 'var(--bg-overlay)', border: '1px solid var(--border-default)', borderRadius: 3, padding: '1px 5px', fontFamily: 'monospace', fontSize: 10, marginRight: 6, color: 'var(--text-secondary)' }}>
                               {productCode}
                             </span>
                             {channel}
                           </td>
-                          <td className="py-2.5 px-4 text-right">
+                          <td style={{ ...tableCell, textAlign: 'right' }}>
                             {riskSignal !== null && riskSignal !== undefined ? (
-                              <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
-                                Number(riskSignal) > 0.4
-                                  ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
-                                  : 'bg-slate-800 text-slate-300'
-                              }`}>
+                              <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, fontFamily: 'monospace', background: highRisk ? 'var(--warn-subtle)' : 'var(--bg-overlay)', color: highRisk ? 'var(--warn-text)' : 'var(--text-secondary)', border: `1px solid ${highRisk ? 'var(--warn-border)' : 'var(--border-default)'}` }}>
                                 {Number(riskSignal).toFixed(2)}
                               </span>
-                            ) : (
-                              <span className="text-slate-500">—</span>
-                            )}
+                            ) : <span style={{ color: 'var(--text-disabled)' }}>—</span>}
                           </td>
-                          <td className="py-2.5 px-4 text-right font-medium text-slate-100">
+                          <td style={{ ...tableCell, textAlign: 'right', fontFamily: 'monospace', fontWeight: 600, color: 'var(--text-primary)' }}>
                             {amount !== undefined && amount !== null ? formatCurrency(amount) : '—'}
                           </td>
                         </tr>
@@ -573,180 +490,135 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
             )}
           </div>
 
-          {/* Graph Entities Summary Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {/* Customer & Cards */}
-            <div className="p-3 rounded-lg bg-slate-900/60 border border-slate-800/80 space-y-1.5">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
-                <CreditCard className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Connected Cards</span>
+          {/* Entity mini-cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
+            {[
+              { icon: <CreditCard className="w-3.5 h-3.5" />, label: 'Connected Cards', value: cardEvs.length > 0 ? cardEvs.map((c) => `Card #${c.evidence_id || '19739'}`).join(', ') : '1 Card (19739)', color: 'var(--accent-text)' },
+              { icon: <Smartphone className="w-3.5 h-3.5" />, label: 'Device Profiles', value: devEvs.length > 0 ? `${devEvs.length} Profiles` : '2 Profiles', color: '#c4b5fd' },
+              { icon: <FileText className="w-3.5 h-3.5" />, label: 'Billing Region', value: billingEvs.length > 0 ? billingEvs[0].evidence_id || '—' : 'Consistent / Match', color: 'var(--success-text)' },
+              { icon: <Layers className="w-3.5 h-3.5" />, label: 'Email Domain', value: emailEvs.length > 0 ? emailEvs[0].evidence_id || '—' : 'Legitimate / Corporate', color: '#7dd3fc' },
+            ].map(({ icon, label, value, color }) => (
+              <div key={label} style={{ ...card, padding: '10px 12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  <span style={{ color }}>{icon}</span>
+                  {label}
+                </div>
+                <p style={{ margin: 0, fontSize: 11, fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{value}</p>
               </div>
-              <p className="text-xs font-mono text-slate-300">
-                {cardEvs.length > 0 ? (
-                  cardEvs.map((c, i) => <span key={i} className="block truncate">Card #{c.evidence_id || '19739'}</span>)
-                ) : (
-                  <span className="text-slate-500">1 Card (19739)</span>
-                )}
-              </p>
-            </div>
-
-            {/* Devices */}
-            <div className="p-3 rounded-lg bg-slate-900/60 border border-slate-800/80 space-y-1.5">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
-                <Smartphone className="w-3.5 h-3.5 text-purple-400" />
-                <span>Device Profiles</span>
-              </div>
-              <p className="text-xs font-mono text-slate-300">
-                {devEvs.length > 0 ? `${devEvs.length} Profiles Recorded` : '2 Profiles (Windows, MacOS)'}
-              </p>
-            </div>
-
-            {/* Billing Region */}
-            <div className="p-3 rounded-lg bg-slate-900/60 border border-slate-800/80 space-y-1.5">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
-                <FileText className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Billing Region</span>
-              </div>
-              <p className="text-xs font-mono text-slate-300">
-                {billingEvs.length > 0 ? billingEvs[0].evidence_id : 'Consistent / Match'}
-              </p>
-            </div>
-
-            {/* Email Domains */}
-            <div className="p-3 rounded-lg bg-slate-900/60 border border-slate-800/80 space-y-1.5">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
-                <Layers className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Email Domain</span>
-              </div>
-              <p className="text-xs font-mono text-slate-300">
-                {emailEvs.length > 0 ? emailEvs[0].evidence_id : 'Legitimate / Corporate'}
-              </p>
-            </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* ==================================================
-          TAB 2: INTELLIGENCE & POLICY
-          ================================================== */}
+      {/* ══════════════════════════════════════════════════════
+          TAB 2 — INTELLIGENCE & POLICY
+          ══════════════════════════════════════════════════════ */}
       {activeTab === 'policy' && (
-        <div className="space-y-4">
-          {/* Groq AI Reasoning Brief */}
-          <div className="rounded-lg border border-slate-800/80 bg-slate-900/50 p-4 space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
-              <div className="flex items-center gap-2">
-                <Cpu className="w-4 h-4 text-purple-400" />
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-200">
-                  AI Evidence Reasoning Brief
-                </h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+          {/* AI Reasoning */}
+          <div style={{ ...card, padding: '14px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border-default)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#c4b5fd' }}>
+                <Cpu className="w-4 h-4" />
+                AI Evidence Reasoning
               </div>
-              <span className="text-[11px] font-mono text-slate-400">Model: Groq (openai/gpt-oss-120b)</span>
+              <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--text-muted)' }}>Groq / openai-gpt-oss-120b</span>
             </div>
-
-            <div className="text-xs text-slate-300 font-sans leading-relaxed space-y-2">
-              {investigation?.reasoning_summary ? (
-                <p>{investigation.reasoning_summary}</p>
-              ) : historyRuns.length > 0 && historyRuns[0].reasoning_summary ? (
-                <p>{historyRuns[0].reasoning_summary}</p>
-              ) : (
-                <p className="text-slate-500 italic">
+            <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
+              {investigation?.reasoning_summary || (historyRuns[0]?.reasoning_summary) || (
+                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>
                   Run an agent investigation to generate evidence-grounded AI reasoning.
-                </p>
+                </span>
               )}
-            </div>
-
-            {/* Observability chips */}
+            </p>
             {investigation?.tokens && (
-              <div className="flex flex-wrap items-center gap-3 pt-2 text-[11px] text-slate-400 font-mono border-t border-slate-800/60">
-                <span>Latency: <strong className="text-slate-200">{investigation.latency ? `${investigation.latency.toFixed(2)}s` : 'N/A'}</strong></span>
-                <span>Total Tokens: <strong className="text-slate-200">{investigation.tokens.total}</strong></span>
-                <span>Prompt: <strong className="text-slate-200">{investigation.tokens.prompt}</strong></span>
-                <span>Completion: <strong className="text-slate-200">{investigation.tokens.completion}</strong></span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border-subtle)', fontSize: 11, fontFamily: 'monospace', color: 'var(--text-muted)' }}>
+                {investigation.latency && <span>Latency <strong style={{ color: 'var(--text-secondary)' }}>{investigation.latency.toFixed(2)}s</strong></span>}
+                <span>Total <strong style={{ color: 'var(--text-secondary)' }}>{investigation.tokens.total}</strong></span>
+                <span>Prompt <strong style={{ color: 'var(--text-secondary)' }}>{investigation.tokens.prompt}</strong></span>
+                <span>Completion <strong style={{ color: 'var(--text-secondary)' }}>{investigation.tokens.completion}</strong></span>
               </div>
             )}
           </div>
 
-          {/* Deterministic Policy Rules (R1–R10) */}
-          <div className="rounded-lg border border-slate-800/80 bg-slate-900/50 p-4 space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
-              <div className="flex items-center gap-2">
-                <Scale className="w-4 h-4 text-indigo-400" />
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-200">
-                  Deterministic Policy Engine (Rules R1–R10)
-                </h3>
+          {/* Policy rules */}
+          <div style={{ ...card, padding: '14px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border-default)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--accent-text)' }}>
+                <Scale className="w-4 h-4" />
+                Deterministic Policy Engine — Rules R1–R10
               </div>
-              <span className="text-[11px] text-slate-400 font-mono">10 Evaluation Checks</span>
+              <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--text-muted)' }}>10 checks</span>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-              {investigation?.rules_evaluated && investigation.rules_evaluated.length > 0 ? (
-                investigation.rules_evaluated.map((r, i) => (
+            {investigation?.rules_evaluated && investigation.rules_evaluated.length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                {investigation.rules_evaluated.map((r, i) => (
                   <div
                     key={i}
-                    className={`p-2.5 rounded-lg border text-xs flex items-start justify-between gap-2 ${
-                      r.triggered
-                        ? 'bg-amber-500/5 border-amber-500/20 text-slate-200'
-                        : 'bg-slate-950/60 border-slate-800/80 text-slate-400'
-                    }`}
+                    style={{
+                      padding: '9px 11px',
+                      borderRadius: 4,
+                      border: `1px solid ${r.triggered ? 'var(--warn-border)' : 'var(--border-default)'}`,
+                      background: r.triggered ? 'var(--warn-subtle)' : 'var(--bg-base)',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      justifyContent: 'space-between',
+                      gap: 8,
+                    }}
                   >
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-semibold text-slate-200">{r.rule_id}</span>
-                        <span className="text-[11px] font-medium text-slate-300">{r.rule_name || r.description}</span>
-                      </div>
+                    <div>
+                      <p style={{ margin: '0 0 2px', fontSize: 11, fontFamily: 'monospace', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        {r.rule_id}
+                        {r.rule_name && <span style={{ fontFamily: 'inherit', fontWeight: 400, color: 'var(--text-secondary)', marginLeft: 8 }}>{r.rule_name}</span>}
+                      </p>
                       {r.description && r.rule_name && (
-                        <p className="text-[11px] text-slate-500">{r.description}</p>
+                        <p style={{ margin: 0, fontSize: 10, color: 'var(--text-muted)' }}>{r.description}</p>
                       )}
                     </div>
-                    <span className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-medium font-mono ${
-                      r.triggered
-                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold'
-                        : 'bg-slate-800 text-slate-400'
-                    }`}>
+                    <span className="pill" style={{ flexShrink: 0, fontSize: 10, ...(r.triggered ? { background: 'var(--warn-subtle)', color: 'var(--warn-text)', borderColor: 'var(--warn-border)' } : { background: 'var(--bg-overlay)', color: 'var(--text-muted)', borderColor: 'var(--border-default)' }) }}>
                       {r.triggered ? 'TRIGGERED' : 'PASS'}
                     </span>
                   </div>
-                ))
-              ) : (
-                <div className="col-span-2 p-4 text-center text-slate-500 text-xs font-mono">
-                  Policy rules R1–R10 are evaluated and stored during investigation execution.
-                </div>
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                Rules evaluated and stored during investigation execution.
+              </p>
+            )}
           </div>
 
-          {/* Actions & SAR Recommendation */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {/* Next Best Actions */}
-            <div className="rounded-lg border border-slate-800/80 bg-slate-900/50 p-4 space-y-2.5">
-              <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
-                <ListChecks className="w-4 h-4 text-indigo-400" />
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-300">Mitigation Actions</h4>
+          {/* Actions + SAR */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ ...card, padding: '14px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border-default)', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--success-text)' }}>
+                <ListChecks className="w-4 h-4" />
+                Mitigation Actions
               </div>
-              <ul className="space-y-1.5 text-xs text-slate-300">
-                {(investigation?.next_best_actions_final || ['AWAIT_CUSTOMER_RESPONSE', 'MONITOR_TRANSACTIONS']).map((act, i) => (
-                  <li key={i} className="flex items-center gap-2 font-mono text-[11px]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-                    <span>{act}</span>
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {(investigation?.next_best_actions_final?.length ? investigation.next_best_actions_final : ['AWAIT_CUSTOMER_RESPONSE', 'MONITOR_TRANSACTIONS']).map((act, i) => (
+                  <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, fontFamily: 'monospace', color: 'var(--text-secondary)' }}>
+                    <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
+                    {act}
                   </li>
                 ))}
               </ul>
             </div>
 
-            {/* SAR Status */}
-            <div className="rounded-lg border border-slate-800/80 bg-slate-900/50 p-4 space-y-2.5">
-              <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
-                <FileWarning className="w-4 h-4 text-amber-400" />
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-300">SAR Recommendation</h4>
+            <div style={{ ...card, padding: '14px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border-default)', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--warn-text)' }}>
+                <FileWarning className="w-4 h-4" />
+                SAR Recommendation
               </div>
-              <div className="text-xs space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-400">Filing Status:</span>
-                  <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-200 font-mono text-[11px] font-semibold">
+              <div style={{ fontSize: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Status:</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--text-primary)' }}>
                     {investigation?.SAR?.status || 'NOT_RECOMMENDED'}
                   </span>
                 </div>
-                <p className="text-slate-400 text-[11px] pt-1 leading-relaxed">
+                <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.55 }}>
                   {investigation?.SAR?.reason || 'Pending customer transaction verification before SAR consideration.'}
                 </p>
               </div>
@@ -755,249 +627,223 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
         </div>
       )}
 
-      {/* ==================================================
-          TAB 3: EVIDENCE REQUESTS
-          ================================================== */}
+      {/* ══════════════════════════════════════════════════════
+          TAB 3 — EVIDENCE REQUESTS
+          ══════════════════════════════════════════════════════ */}
       {activeTab === 'requests' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+          {/* Header row */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-200">
-                Customer & Analyst Evidence Requests
-              </h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                Manage dispute verification requests. Responding triggers an immutable re-investigation.
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Evidence Requests</p>
+              <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+                Responding to a pending request triggers an immutable re-investigation.
               </p>
             </div>
             <button
-              onClick={() => setShowCreateForm(v => !v)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/15 hover:bg-indigo-600/25 text-indigo-300 border border-indigo-500/20 text-xs font-medium transition"
+              className="btn"
+              style={showCreateForm
+                ? { background: 'var(--bg-overlay)', color: 'var(--text-secondary)', borderColor: 'var(--border-strong)' }
+                : { background: 'var(--accent-subtle)', color: 'var(--accent-text)', borderColor: 'var(--accent-border)' }
+              }
+              onClick={() => setShowCreateForm((v) => !v)}
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>{showCreateForm ? 'Close Form' : 'New Request'}</span>
+              {showCreateForm ? 'Close' : 'New Request'}
             </button>
           </div>
 
           {erError && (
-            <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center justify-between">
-              <span>{erError}</span>
-              <button onClick={() => setErError(null)} className="text-slate-400 hover:text-slate-200">✕</button>
+            <div style={{ padding: '9px 12px', background: 'var(--danger-subtle)', border: '1px solid var(--danger-border)', borderRadius: 5, fontSize: 12, color: 'var(--danger-text)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              {erError}
+              <button onClick={() => setErError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 14 }}>✕</button>
             </div>
           )}
 
-          {/* Create Request Drawer / Form */}
+          {/* Create form */}
           {showCreateForm && (
-            <div className="rounded-lg border border-indigo-500/30 bg-slate-900 p-4 space-y-3">
-              <h4 className="text-xs font-semibold text-slate-200 uppercase tracking-wider">Draft Evidence Request</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div style={{ ...card, padding: '14px 16px', borderColor: 'var(--accent-border)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Draft Request
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div>
-                  <label className="text-slate-400 block mb-1">Request Type</label>
-                  <select
-                    value={createPayload.request_type}
-                    onChange={e => setCreatePayload(prev => ({ ...prev, request_type: e.target.value }))}
-                    className="w-full px-2.5 py-1.5 rounded-md bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"
-                  >
+                  <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Request Type</label>
+                  <select value={createPayload.request_type} onChange={(e) => setCreatePayload((p) => ({ ...p, request_type: e.target.value }))} style={selectStyle}>
                     <option value="customer_verification">Customer Verification</option>
-                    <option value="transaction_confirmation">Transaction Confirmation</option>
+                    <option value="transaction_dispute">Transaction Dispute</option>
                     <option value="identity_verification">Identity Verification</option>
                     <option value="document_request">Document Request</option>
+                    <option value="other">Other</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-slate-400 block mb-1">Transaction ID (optional)</label>
+                  <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Transaction ID (optional)</label>
                   <input
                     type="text"
-                    placeholder="e.g. 3530164"
-                    value={createPayload.transaction_id || ''}
-                    onChange={e => setCreatePayload(prev => ({ ...prev, transaction_id: e.target.value || undefined }))}
-                    className="w-full px-2.5 py-1.5 rounded-md bg-slate-950 border border-slate-800 text-slate-200 text-xs font-mono focus:outline-none focus:border-indigo-500"
+                    placeholder="e.g. TXN-00123"
+                    value={(createPayload as any).transaction_id || ''}
+                    onChange={(e) => setCreatePayload((p) => ({ ...p, transaction_id: e.target.value || null } as any))}
+                    style={inputStyle}
                   />
                 </div>
               </div>
-
               <div>
-                <label className="text-slate-400 block mb-1">Request Prompt to Customer</label>
+                <label style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Request Details *</label>
                 <textarea
-                  rows={2}
-                  placeholder="Specify verification question..."
+                  rows={3}
+                  placeholder="Describe what evidence or verification is needed…"
                   value={createPayload.request_text}
-                  onChange={e => setCreatePayload(prev => ({ ...prev, request_text: e.target.value }))}
-                  className="w-full px-2.5 py-1.5 rounded-md bg-slate-950 border border-slate-800 text-slate-200 text-xs resize-none focus:outline-none focus:border-indigo-500"
+                  onChange={(e) => setCreatePayload((p) => ({ ...p, request_text: e.target.value }))}
+                  style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
                 />
               </div>
-
-              <div className="flex items-center gap-2 pt-1">
-                <button
-                  onClick={handleCreateRequest}
-                  disabled={createSubmitting || createPayload.request_text.trim().length < 5}
-                  className="px-3.5 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs transition disabled:opacity-40"
-                >
-                  {createSubmitting ? 'Submitting...' : 'Send Request'}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-primary" onClick={handleCreateRequest} disabled={createSubmitting}>
+                  {createSubmitting ? <><RefreshCw className="w-3 h-3 animate-spin" /> Submitting…</> : <><Send className="w-3 h-3" /> Submit Request</>}
                 </button>
-                <button
-                  onClick={() => setShowCreateForm(false)}
-                  className="px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 text-xs"
-                >
-                  Cancel
-                </button>
+                <button className="btn btn-ghost" onClick={() => setShowCreateForm(false)}>Cancel</button>
               </div>
             </div>
           )}
 
-          {/* Requests List */}
+          {/* Request list */}
           {erLoading ? (
-            <div className="p-8 text-center text-slate-400 text-xs font-mono">Loading requests...</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="skeleton" style={{ height: 64, borderRadius: 6 }} />
+              ))}
+            </div>
           ) : liveRequests.length === 0 ? (
-            <div className="p-8 text-center text-slate-500 text-xs rounded-lg border border-slate-800 bg-slate-900/30 space-y-1">
-              <p>No evidence requests created for this case.</p>
-              <p className="text-slate-600">Requests discovered in TigerGraph or created by analysts appear here.</p>
+            <div style={{ padding: '40px 14px', textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
+              No evidence requests for this case.
             </div>
           ) : (
-            <div className="space-y-3">
-              {liveRequests.map(er => {
-                const isPending = er.status === 'PENDING';
-                const isResponded = er.status === 'RESPONDED';
-                const isCancelled = er.status === 'CANCELLED';
-                const isExpanded = expandedRequestId === er.request_id;
-                const actionResult = requestActionResult[er.request_id];
-                const isRespondSubmitting = respondSubmitting[er.request_id] || false;
-                const isCancelSubmitting = cancelSubmitting[er.request_id] || false;
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {liveRequests.map((req) => {
+                const reqId = req.request_id;
+                const isPending = req.status === 'PENDING';
+                const isResponded = req.status === 'RESPONDED';
+                const isCancelled = req.status === 'CANCELLED';
+                const isExpanded = expandedRequestId === reqId;
+                const borderColor = isPending ? 'var(--warn-border)' : isResponded ? 'var(--success-border)' : 'var(--border-default)';
+                const actionMsg = requestActionResult[reqId];
 
                 return (
-                  <div
-                    key={er.request_id}
-                    className={`rounded-lg border text-xs p-4 space-y-3 transition ${
-                      isPending
-                        ? 'border-amber-500/30 bg-slate-900/60'
-                        : isResponded
-                        ? 'border-emerald-500/30 bg-slate-900/40'
-                        : 'border-slate-800 bg-slate-950/40 opacity-70'
-                    }`}
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
-                      <div className="space-y-1 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono font-bold text-indigo-300">{er.request_id}</span>
-                          <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px] font-mono">
-                            {er.request_type || 'customer_verification'}
+                  <div key={reqId} style={{ ...card, borderColor, overflow: 'hidden' }}>
+                    {/* Request header */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '10px 14px', gap: 10 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 600, color: 'var(--text-secondary)' }}>{reqId}</span>
+                          <span className="pill" style={{
+                            fontSize: 10,
+                            ...(isPending ? { background: 'var(--warn-subtle)', color: 'var(--warn-text)', borderColor: 'var(--warn-border)' }
+                              : isResponded ? { background: 'var(--success-subtle)', color: 'var(--success-text)', borderColor: 'var(--success-border)' }
+                              : { background: 'var(--bg-overlay)', color: 'var(--text-muted)', borderColor: 'var(--border-default)' }),
+                          }}>
+                            {req.status}
                           </span>
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
-                            isPending
-                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                              : isResponded
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                              : 'bg-slate-800 text-slate-400'
-                          }`}>
-                            {er.status}
+                          <span style={{ fontSize: 10, background: 'var(--bg-raised)', border: '1px solid var(--border-default)', padding: '1px 6px', borderRadius: 3, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                            {req.request_type || 'verification'}
                           </span>
-
-                          {er.triggered_investigation_id && (
-                            <span className="text-[10px] font-mono text-indigo-300 flex items-center gap-1">
-                              <ExternalLink className="w-3 h-3" />
-                              Re-investigation: {er.triggered_investigation_id}
-                            </span>
-                          )}
                         </div>
-
-                        <p className="text-slate-200 text-xs pt-1 leading-relaxed">{er.request_text}</p>
-                        <p className="text-[11px] text-slate-500 font-mono pt-0.5">
-                          Created: {er.created_at ? formatDate(er.created_at) : 'N/A'}
+                        <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                          {req.request_text || req.details?.request_text || '—'}
                         </p>
+                        {req.transaction_id && (
+                          <p style={{ margin: '3px 0 0', fontSize: 10, fontFamily: 'monospace', color: 'var(--text-muted)' }}>
+                            Txn: {req.transaction_id}
+                          </p>
+                        )}
                       </div>
-
-                      {/* Action buttons (only for PENDING) */}
-                      {isPending && (
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button
-                            onClick={() => setExpandedRequestId(isExpanded ? null : er.request_id)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-300 border border-emerald-500/20 text-xs font-medium transition"
-                          >
-                            <MessageSquare className="w-3.5 h-3.5" />
-                            <span>Record Response</span>
-                            {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                          </button>
-                          <button
-                            onClick={() => handleCancel(er.request_id)}
-                            disabled={isCancelSubmitting}
-                            className="p-1.5 rounded-md text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition disabled:opacity-40"
-                            title="Cancel request"
-                          >
-                            <XCircle className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                        {isPending && (
+                          <>
+                            <button
+                              className="btn btn-ghost"
+                              style={{ fontSize: 11 }}
+                              onClick={() => setExpandedRequestId(isExpanded ? null : reqId)}
+                            >
+                              {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                              Respond
+                            </button>
+                            <button
+                              className="btn btn-danger"
+                              style={{ fontSize: 11 }}
+                              disabled={cancelSubmitting[reqId]}
+                              onClick={() => handleCancel(reqId)}
+                            >
+                              {cancelSubmitting[reqId] ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'Cancel'}
+                            </button>
+                          </>
+                        )}
+                        {isResponded && req.triggered_investigation_id && (
+                          <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--success-text)' }}>
+                            → {req.triggered_investigation_id}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Responded Details */}
-                    {isResponded && er.response && (
-                      <div className="p-3 rounded-md bg-emerald-500/5 border border-emerald-500/20 space-y-1">
-                        <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider block">
-                          Customer / Analyst Response ({er.response_source || 'CUSTOMER'})
-                        </span>
-                        <p className="text-slate-200 font-medium">{er.response}</p>
-                        {er.responded_at && (
-                          <span className="text-[10px] text-slate-500 font-mono block pt-0.5">
-                            Recorded: {formatDate(er.responded_at)}
-                          </span>
+                    {/* Response panel */}
+                    {isResponded && req.response && (
+                      <div style={{ margin: '0 14px 10px', padding: '9px 10px', background: 'var(--bg-raised)', border: '1px solid var(--success-border)', borderRadius: 4 }}>
+                        <p style={{ margin: '0 0 3px', fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--success-text)' }}>
+                          Response · {req.response_source || 'CUSTOMER'}
+                        </p>
+                        <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{req.response}</p>
+                        {req.response_assumptions && (
+                          <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>Assumptions: {req.response_assumptions}</p>
                         )}
                       </div>
                     )}
 
-                    {/* Cancelled Details */}
-                    {isCancelled && er.cancelled_reason && (
-                      <div className="text-slate-400 italic text-[11px]">
-                        Cancelled: {er.cancelled_reason}
-                      </div>
-                    )}
-
-                    {/* Expanded Response Form */}
-                    {isPending && isExpanded && (
-                      <div className="p-3.5 rounded-md bg-slate-950 border border-slate-800 space-y-3 pt-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-slate-300">
-                            Log Customer Response (Triggers Re-Investigation)
-                          </span>
-                          <div className="flex items-center gap-1.5 text-xs">
-                            <span className="text-slate-400 text-[11px]">Source:</span>
-                            <select
-                              value={respondSource[er.request_id] || 'CUSTOMER'}
-                              onChange={e => setRespondSource(prev => ({ ...prev, [er.request_id]: e.target.value }))}
-                              className="bg-slate-900 border border-slate-800 text-slate-300 rounded px-2 py-1 text-xs"
-                            >
-                              <option value="CUSTOMER">Customer Verified</option>
-                              <option value="ANALYST">Analyst Confirmed</option>
-                              <option value="SYSTEM">System Telemetry</option>
+                    {/* Inline respond form */}
+                    {isExpanded && isPending && (
+                      <div style={{ padding: '0 14px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: 10, color: 'var(--text-muted)', marginBottom: 3 }}>Response Source</label>
+                            <select value={respondSource[reqId] || 'CUSTOMER'} onChange={(e) => setRespondSource((p) => ({ ...p, [reqId]: e.target.value }))} style={{ ...selectStyle, width: '100%' }}>
+                              <option value="CUSTOMER">Customer</option>
+                              <option value="ANALYST">Analyst</option>
+                              <option value="SYSTEM">System</option>
+                              <option value="THIRD_PARTY">Third Party</option>
                             </select>
                           </div>
                         </div>
-
-                        <textarea
-                          rows={2}
-                          placeholder="e.g. Customer confirms transaction was authorized via mobile..."
-                          value={respondText[er.request_id] || ''}
-                          onChange={e => setRespondText(prev => ({ ...prev, [er.request_id]: e.target.value }))}
-                          className="w-full px-2.5 py-1.5 rounded bg-slate-900 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-emerald-500"
-                        />
-
-                        {actionResult && (
-                          <p className="text-xs font-medium text-emerald-400">{actionResult}</p>
-                        )}
-
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleRespond(er.request_id)}
-                            disabled={isRespondSubmitting || !(respondText[er.request_id] || '').trim()}
-                            className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition disabled:opacity-40"
-                          >
-                            {isRespondSubmitting ? 'Recording & Investigating...' : 'Submit & Trigger Re-investigation'}
-                          </button>
-                          <button
-                            onClick={() => setExpandedRequestId(null)}
-                            className="px-2.5 py-1.5 text-slate-400 hover:text-slate-200 text-xs"
-                          >
-                            Close
-                          </button>
+                        <div>
+                          <label style={{ display: 'block', fontSize: 10, color: 'var(--text-muted)', marginBottom: 3 }}>Response *</label>
+                          <textarea
+                            rows={3}
+                            placeholder="Enter the response to this evidence request…"
+                            value={respondText[reqId] || ''}
+                            onChange={(e) => setRespondText((p) => ({ ...p, [reqId]: e.target.value }))}
+                            style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
+                          />
                         </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button className="btn btn-primary" style={{ fontSize: 11 }} disabled={respondSubmitting[reqId]} onClick={() => handleRespond(reqId)}>
+                            {respondSubmitting[reqId] ? <><RefreshCw className="w-3 h-3 animate-spin" /> Submitting…</> : <><Send className="w-3 h-3" /> Submit & Re-investigate</>}
+                          </button>
+                          <button className="btn btn-ghost" style={{ fontSize: 11 }} onClick={() => setExpandedRequestId(null)}>Cancel</button>
+                        </div>
+                        {actionMsg && (
+                          <p style={{ margin: 0, fontSize: 11, color: actionMsg.startsWith('Error') ? 'var(--danger-text)' : 'var(--success-text)' }}>
+                            {actionMsg}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Cancelled notice */}
+                    {isCancelled && (
+                      <div style={{ margin: '0 14px 10px', padding: '7px 10px', background: 'var(--bg-raised)', border: '1px solid var(--border-default)', borderRadius: 4 }}>
+                        <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>
+                          Cancelled: {req.cancelled_reason || 'No reason provided.'}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -1008,47 +854,55 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
         </div>
       )}
 
-      {/* ==================================================
-          TAB 4: RUNS & AUDIT LOG
-          ================================================== */}
+      {/* ══════════════════════════════════════════════════════
+          TAB 4 — RUNS & AUDIT LOG
+          ══════════════════════════════════════════════════════ */}
       {activeTab === 'audit' && (
-        <div className="space-y-4">
-          {/* Historical Runs */}
-          <div className="rounded-lg border border-slate-800/80 bg-slate-900/50 p-4 space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-200">
-                Persistent Investigation Runs
-              </h3>
-              <span className="text-[11px] text-slate-400 font-mono">
-                {historyRuns.length} immutable snapshots
-              </span>
-            </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
+          {/* History runs */}
+          <div style={card}>
+            <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border-default)', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
+              Investigation Runs — {historyRuns.length} total
+            </div>
             {historyRuns.length === 0 ? (
-              <p className="text-xs text-slate-500 py-4 text-center">No runs recorded yet.</p>
+              <p style={{ padding: '32px 14px', textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                No investigation runs yet.
+              </p>
             ) : (
-              <div className="space-y-2">
-                {historyRuns.map(run => (
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {historyRuns.map((run, i) => (
                   <div
                     key={run.investigation_id}
-                    className="p-3 rounded-lg bg-slate-950/70 border border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      justifyContent: 'space-between',
+                      padding: '10px 14px',
+                      gap: 12,
+                      borderBottom: i < historyRuns.length - 1 ? '1px solid var(--border-subtle)' : undefined,
+                    }}
                   >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-indigo-300">{run.investigation_id}</span>
-                        <StatusBadge status={run.status || run.case_status} verdict={run.verdict} showVerdict={true} />
-                        <span className="text-[10px] font-mono text-slate-500">
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 600, color: 'var(--accent-text)' }}>
+                          {run.investigation_id}
+                        </span>
+                        <StatusBadge status={run.case_status || run.status} verdict={run.verdict} />
+                        <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--text-muted)' }}>
                           {formatDate(run.created_at)}
                         </span>
                       </div>
                       {run.reasoning_summary && (
-                        <p className="text-slate-400 line-clamp-1 text-[11px]">{run.reasoning_summary}</p>
+                        <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 480 }}>
+                          {run.reasoning_summary}
+                        </p>
                       )}
                     </div>
-
                     <button
+                      className="btn btn-ghost"
+                      style={{ fontSize: 11, flexShrink: 0 }}
                       onClick={() => setSelectedInvestigationId(run.investigation_id)}
-                      className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs transition shrink-0"
                     >
                       View Snapshot
                     </button>
@@ -1058,23 +912,58 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
             )}
           </div>
 
-          {/* Chronological Audit Log */}
-          <div className="rounded-lg border border-slate-800/80 bg-slate-900/50 p-4 space-y-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-200 border-b border-slate-800/80 pb-2.5">
-              Chronological Audit Log
-            </h3>
+          {/* Audit log */}
+          <div style={{ ...card, padding: '14px 16px' }}>
+            <p style={{ margin: '0 0 14px', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
+              Audit Log
+            </p>
             <AuditTimeline events={auditEvents} />
           </div>
         </div>
       )}
 
-      {/* Historical Investigation Snapshot Modal */}
-      {selectedInvestigationId && (
-        <InvestigationHistoryModal
-          investigationId={selectedInvestigationId}
-          onClose={() => setSelectedInvestigationId(null)}
-        />
-      )}
+      {/* Modal */}
+      <InvestigationHistoryModal
+        investigationId={selectedInvestigationId}
+        onClose={() => setSelectedInvestigationId(null)}
+      />
     </div>
   );
 };
+
+/* ── Tab item sub-component ──────────────────────────────── */
+function TabItem({
+  icon, label, active, onClick, badge, badgeWarn,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  badge?: number;
+  badgeWarn?: boolean;
+}) {
+  return (
+    <button
+      className={`tab-item${active ? ' active' : ''}`}
+      onClick={onClick}
+    >
+      {icon}
+      {label}
+      {badge !== undefined && badge > 0 && (
+        <span
+          className="pill"
+          style={{
+            fontSize: 10,
+            padding: '1px 6px',
+            marginLeft: 2,
+            ...(badgeWarn
+              ? { background: 'var(--warn-subtle)', color: 'var(--warn-text)', borderColor: 'var(--warn-border)' }
+              : { background: 'var(--bg-overlay)', color: 'var(--text-muted)', borderColor: 'var(--border-default)' }),
+          }}
+        >
+          {badge}
+        </span>
+      )}
+    </button>
+  );
+}

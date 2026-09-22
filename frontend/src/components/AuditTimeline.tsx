@@ -2,119 +2,132 @@ import React from 'react';
 import { AuditEventItem } from '../types/investigation';
 import { formatDate } from '../lib/utils';
 import {
-  PlayCircle,
-  Database,
-  BrainCircuit,
-  Scale,
-  CheckCircle2,
-  AlertCircle,
-  FileQuestion,
-  MessageSquare,
-  XCircle,
-  User,
-  Bot,
-  Cpu,
-  Send,
+  PlayCircle, Database, BrainCircuit, Scale, CheckCircle2, AlertCircle,
+  FileQuestion, MessageSquare, XCircle, User, Bot, Cpu, Send,
 } from 'lucide-react';
 
 interface AuditTimelineProps {
   events: AuditEventItem[];
-  className?: string;
 }
 
-export const AuditTimeline: React.FC<AuditTimelineProps> = ({ events, className = '' }) => {
+const EVENT_CONFIG: Record<string, { icon: React.ReactNode; color: string }> = {
+  INVESTIGATION_STARTED:                       { icon: <PlayCircle className="w-3.5 h-3.5" />,   color: '#38bdf8' },
+  INVESTIGATION_STARTED_FROM_EVIDENCE_RESPONSE:{ icon: <PlayCircle className="w-3.5 h-3.5" />,   color: '#38bdf8' },
+  EVIDENCE_COLLECTED:                          { icon: <Database className="w-3.5 h-3.5" />,      color: 'var(--success)' },
+  EVIDENCE_REQUEST_CREATED:                    { icon: <FileQuestion className="w-3.5 h-3.5" />,  color: 'var(--warn)' },
+  EVIDENCE_REQUEST_RESPONDED:                  { icon: <MessageSquare className="w-3.5 h-3.5" />, color: 'var(--success)' },
+  EVIDENCE_REQUEST_CANCELLED:                  { icon: <XCircle className="w-3.5 h-3.5" />,       color: 'var(--text-muted)' },
+  LLM_REASONING_COMPLETED:                     { icon: <BrainCircuit className="w-3.5 h-3.5" />,  color: '#c4b5fd' },
+  POLICY_EVALUATED:                            { icon: <Scale className="w-3.5 h-3.5" />,         color: 'var(--accent-text)' },
+  DECISION_GENERATED:                          { icon: <CheckCircle2 className="w-3.5 h-3.5" />,  color: 'var(--accent-text)' },
+  INVESTIGATION_COMPLETED:                     { icon: <CheckCircle2 className="w-3.5 h-3.5" />,  color: 'var(--success)' },
+  INVESTIGATION_FAILED:                        { icon: <AlertCircle className="w-3.5 h-3.5" />,   color: 'var(--danger)' },
+  CASE_OPENED:                                 { icon: <PlayCircle className="w-3.5 h-3.5" />,    color: '#38bdf8' },
+};
+
+const DEFAULT_EVENT = { icon: <Send className="w-3.5 h-3.5" />, color: 'var(--text-muted)' };
+
+function ActorBadge({ actor }: { actor: string }) {
+  const norm = (actor || '').toUpperCase();
+  if (norm === 'AGENT')
+    return (
+      <span className="pill" style={{ background: 'rgba(56,189,248,0.08)', color: '#7dd3fc', borderColor: 'rgba(56,189,248,0.2)', fontSize: 10 }}>
+        <Bot className="w-2.5 h-2.5" /> AGENT
+      </span>
+    );
+  if (norm === 'SYSTEM')
+    return (
+      <span className="pill" style={{ background: 'var(--bg-overlay)', color: 'var(--text-secondary)', borderColor: 'var(--border-default)', fontSize: 10 }}>
+        <Cpu className="w-2.5 h-2.5" /> SYSTEM
+      </span>
+    );
+  return (
+    <span className="pill" style={{ background: 'rgba(196,181,253,0.08)', color: '#c4b5fd', borderColor: 'rgba(196,181,253,0.2)', fontSize: 10 }}>
+      <User className="w-2.5 h-2.5" /> ANALYST
+    </span>
+  );
+}
+
+export const AuditTimeline: React.FC<AuditTimelineProps> = ({ events }) => {
   if (!events || events.length === 0) {
     return (
-      <div className={`p-4 text-center text-sm text-slate-400 bg-slate-900/50 rounded-lg border border-slate-800 ${className}`}>
-        No audit log events recorded for this case.
-      </div>
+      <p style={{ fontSize: 12, color: 'var(--text-muted)', padding: '16px 0', textAlign: 'center' }}>
+        No audit events recorded.
+      </p>
     );
   }
 
-  const getEventIcon = (eventType: string) => {
-    switch (eventType) {
-      case 'INVESTIGATION_STARTED':
-      case 'INVESTIGATION_STARTED_FROM_EVIDENCE_RESPONSE':
-        return <PlayCircle className="w-4 h-4 text-cyan-400" />;
-      case 'EVIDENCE_COLLECTED':
-        return <Database className="w-4 h-4 text-emerald-400" />;
-      case 'EVIDENCE_REQUEST_CREATED':
-        return <FileQuestion className="w-4 h-4 text-amber-400" />;
-      case 'EVIDENCE_REQUEST_RESPONDED':
-        return <MessageSquare className="w-4 h-4 text-emerald-400" />;
-      case 'EVIDENCE_REQUEST_CANCELLED':
-        return <XCircle className="w-4 h-4 text-slate-400" />;
-      case 'LLM_REASONING_COMPLETED':
-        return <BrainCircuit className="w-4 h-4 text-purple-400" />;
-      case 'POLICY_EVALUATED':
-        return <Scale className="w-4 h-4 text-indigo-400" />;
-      case 'DECISION_GENERATED':
-        return <CheckCircle2 className="w-4 h-4 text-blue-400" />;
-      case 'INVESTIGATION_COMPLETED':
-        return <CheckCircle2 className="w-4 h-4 text-emerald-400" />;
-      case 'INVESTIGATION_FAILED':
-        return <AlertCircle className="w-4 h-4 text-rose-400" />;
-      case 'CASE_OPENED':
-        return <PlayCircle className="w-4 h-4 text-sky-400" />;
-      default:
-        return <Send className="w-4 h-4 text-slate-400" />;
-    }
-  };
-
-  const getActorBadge = (actor: string) => {
-    const norm = (actor || '').toUpperCase();
-    if (norm === 'AGENT') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-          <Bot className="w-3 h-3" /> AGENT
-        </span>
-      );
-    }
-    if (norm === 'SYSTEM') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-300 border border-slate-700">
-          <Cpu className="w-3 h-3" /> SYSTEM
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20">
-        <User className="w-3 h-3" /> ANALYST
-      </span>
-    );
-  };
-
   return (
-    <div className={`space-y-3 ${className}`}>
-      <div className="relative pl-6 border-l border-slate-800 space-y-6">
-        {events.map((event) => (
-          <div key={event.id} className="relative group">
-            {/* Timeline dot */}
-            <div className="absolute -left-[31px] top-0.5 w-6 h-6 rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center shadow-sm">
-              {getEventIcon(event.event_type)}
-            </div>
+    <div style={{ position: 'relative', paddingLeft: 28 }}>
+      {/* Vertical line */}
+      <div
+        style={{
+          position: 'absolute',
+          left: 11,
+          top: 10,
+          bottom: 10,
+          width: 1,
+          background: 'var(--border-default)',
+        }}
+      />
 
-            {/* Event header */}
-            <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-xs text-slate-200 tracking-wide uppercase">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {events.map((event) => {
+          const cfg = EVENT_CONFIG[event.event_type] ?? DEFAULT_EVENT;
+          return (
+            <div key={event.id} style={{ position: 'relative' }}>
+              {/* Icon node */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: -28,
+                  top: 0,
+                  width: 22,
+                  height: 22,
+                  borderRadius: '50%',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-default)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: cfg.color,
+                  flexShrink: 0,
+                }}
+              >
+                {cfg.icon}
+              </div>
+
+              {/* Event label row */}
+              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 4 }}>
+                <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-primary)' }}>
                   {event.event_type.replace(/_/g, ' ')}
                 </span>
-                {getActorBadge(event.actor)}
+                <ActorBadge actor={event.actor} />
+                <span style={{ marginLeft: 'auto', fontSize: 10, fontFamily: 'monospace', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                  {formatDate(event.created_at)}
+                </span>
               </div>
-              <span className="text-[11px] text-slate-500 font-mono">
-                {formatDate(event.created_at)}
-              </span>
-            </div>
 
-            {/* Event description */}
-            {event.description && (
-              <p className="text-xs text-slate-300 leading-relaxed bg-slate-900/60 p-2.5 rounded-md border border-slate-800/80">
-                {event.description}
-              </p>
-            )}
-          </div>
-        ))}
+              {/* Description */}
+              {event.description && (
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 12,
+                    color: 'var(--text-secondary)',
+                    lineHeight: 1.5,
+                    padding: '8px 10px',
+                    background: 'var(--bg-raised)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 4,
+                  }}
+                >
+                  {event.description}
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

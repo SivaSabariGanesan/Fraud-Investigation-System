@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Case } from '../types/investigation';
 import { StatusBadge } from '../components/StatusBadge';
 import { formatCurrency } from '../lib/utils';
-import { Search, Filter, ArrowRight, RefreshCw, XCircle } from 'lucide-react';
+import { Search, RefreshCw, ArrowRight, AlertCircle, SlidersHorizontal } from 'lucide-react';
 
 interface CasesProps {
   cases: Case[];
@@ -12,192 +12,258 @@ interface CasesProps {
   onSelectCase: (caseId: string) => void;
 }
 
-export const Cases: React.FC<CasesProps> = ({ cases, loading, error, onRefresh, onSelectCase }) => {
+export const Cases: React.FC<CasesProps> = ({
+  cases,
+  loading,
+  error,
+  onRefresh,
+  onSelectCase,
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [verdictFilter, setVerdictFilter] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [verdictFilter, setVerdictFilter] = useState('ALL');
 
-  const filteredCases = cases.filter((c) => {
-    const query = searchTerm.trim().toLowerCase();
-    const matchesSearch =
-      !query ||
-      c.case_id.toLowerCase().includes(query) ||
-      (c.customer_id && c.customer_id.toLowerCase().includes(query)) ||
-      (c.pattern && c.pattern.toLowerCase().includes(query));
+  const filtered = cases.filter((c) => {
+    const q = searchTerm.trim().toLowerCase();
+    const matchSearch =
+      !q ||
+      c.case_id.toLowerCase().includes(q) ||
+      (c.customer_id && c.customer_id.toLowerCase().includes(q)) ||
+      (c.pattern && c.pattern.toLowerCase().includes(q));
 
-    let matchesStatus = true;
-    if (statusFilter !== 'ALL') {
-      const caseStatus = (c.status || '').toUpperCase();
-      matchesStatus = caseStatus === statusFilter;
-    }
+    const matchStatus =
+      statusFilter === 'ALL' || (c.status || '').toUpperCase() === statusFilter;
 
-    let matchesVerdict = true;
-    if (verdictFilter !== 'ALL') {
-      const caseVerdict = (c.verdict || '').toUpperCase();
-      if (verdictFilter === 'UNASSIGNED') {
-        matchesVerdict = !caseVerdict;
-      } else {
-        matchesVerdict = caseVerdict === verdictFilter;
-      }
-    }
+    const caseVerdict = (c.verdict || '').toUpperCase();
+    const matchVerdict =
+      verdictFilter === 'ALL' ||
+      (verdictFilter === 'UNASSIGNED' ? !caseVerdict : caseVerdict === verdictFilter);
 
-    return matchesSearch && matchesStatus && matchesVerdict;
+    return matchSearch && matchStatus && matchVerdict;
   });
 
+  const selectStyle: React.CSSProperties = {
+    background: 'var(--bg-base)',
+    border: '1px solid var(--border-default)',
+    color: 'var(--text-secondary)',
+    borderRadius: 5,
+    fontSize: 12,
+    padding: '5px 10px',
+    outline: 'none',
+    cursor: 'pointer',
+  };
+
   return (
-    <div className="space-y-4">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-slate-100">Cases Directory</h2>
-          <p className="text-xs text-slate-400 mt-0.5">Filter, search, and inspect fraud cases from the graph engine.</p>
+          <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+            Cases Directory
+          </h1>
+          <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
+            {filtered.length} of {cases.length} cases shown
+          </p>
         </div>
-        <button
-          onClick={onRefresh}
-          disabled={loading}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition disabled:opacity-50"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 text-slate-400 ${loading ? 'animate-spin' : ''}`} />
-          <span>Refresh</span>
+        <button className="btn btn-ghost" onClick={onRefresh} disabled={loading}>
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
         </button>
       </div>
 
-      {/* Error Banner */}
+      {/* Error */}
       {error && (
-        <div className="p-3.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2 font-medium">
-            <XCircle className="w-4 h-4 text-rose-400 shrink-0" />
-            <span>Unable to connect to investigation service: {error}</span>
-          </div>
-          <button
-            onClick={onRefresh}
-            className="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-xs text-slate-200 hover:bg-slate-800 transition"
-          >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            padding: '10px 14px',
+            background: 'var(--danger-subtle)',
+            border: '1px solid var(--danger-border)',
+            borderRadius: 6,
+            fontSize: 12,
+            color: 'var(--danger-text)',
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 500 }}>
+            <AlertCircle className="w-4 h-4" style={{ flexShrink: 0 }} />
+            {error}
+          </span>
+          <button className="btn btn-ghost" style={{ fontSize: 11 }} onClick={onRefresh}>
             Retry
           </button>
         </div>
       )}
 
-      {/* Search & Filter Bar */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-3 rounded-lg bg-slate-900/60 border border-slate-800/80">
-        <div className="relative flex-1">
-          <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5 pointer-events-none" />
+      {/* Filter bar */}
+      <div
+        className="card"
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: 10,
+          padding: '10px 14px',
+        }}
+      >
+        {/* Search */}
+        <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 180 }}>
+          <Search
+            className="w-3 h-3"
+            style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}
+          />
           <input
             type="text"
-            placeholder="Search by Case ID, Customer, or Pattern..."
+            placeholder="Search by Case ID, Customer, or Pattern…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-950/80 border border-slate-800 rounded-md pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/30 transition"
+            className="input-base"
+            style={{ width: '100%', paddingLeft: 30, paddingRight: 12, paddingTop: 5, paddingBottom: 5 }}
           />
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1.5">
-            <Filter className="w-3 h-3 text-slate-500" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-slate-950/80 border border-slate-800 text-slate-300 text-xs rounded-md px-2.5 py-1.5 focus:outline-none focus:border-indigo-500/60 transition"
-            >
-              <option value="ALL">All Statuses</option>
-              <option value="UNDER_INVESTIGATION">Under Investigation</option>
-              <option value="VERIFICATION_PENDING">Verification Pending</option>
-              <option value="UNRESOLVED">Pending Initial</option>
-              <option value="CONFIRMED_FRAUD">Confirmed Fraud</option>
-              <option value="CLEARED">Cleared</option>
-              <option value="NEEDS_REVIEW">Needs Review</option>
-            </select>
-          </div>
+        {/* Divider */}
+        <div style={{ width: 1, height: 24, background: 'var(--border-default)', flexShrink: 0 }} />
 
-          <div className="flex items-center gap-1.5">
-            <select
-              value={verdictFilter}
-              onChange={(e) => setVerdictFilter(e.target.value)}
-              className="bg-slate-950/80 border border-slate-800 text-slate-300 text-xs rounded-md px-2.5 py-1.5 focus:outline-none focus:border-indigo-500/60 transition"
-            >
-              <option value="ALL">All Verdicts</option>
-              <option value="APPROVED">Approved</option>
-              <option value="DECLINED">Declined</option>
-              <option value="NEEDS_REVIEW">Needs Review</option>
-              <option value="UNASSIGNED">Unassigned</option>
-            </select>
-          </div>
+        {/* Filters */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <SlidersHorizontal className="w-3 h-3" style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={selectStyle}>
+            <option value="ALL">All Statuses</option>
+            <option value="UNDER_INVESTIGATION">Under Investigation</option>
+            <option value="VERIFICATION_PENDING">Verification Pending</option>
+            <option value="UNRESOLVED">Pending Initial</option>
+            <option value="CONFIRMED_FRAUD">Confirmed Fraud</option>
+            <option value="CLEARED">Cleared</option>
+            <option value="NEEDS_REVIEW">Needs Review</option>
+          </select>
+          <select value={verdictFilter} onChange={(e) => setVerdictFilter(e.target.value)} style={selectStyle}>
+            <option value="ALL">All Verdicts</option>
+            <option value="APPROVED">Approved</option>
+            <option value="DECLINED">Declined</option>
+            <option value="NEEDS_REVIEW">Needs Review</option>
+            <option value="UNASSIGNED">Unassigned</option>
+          </select>
         </div>
       </div>
 
-      {/* Case Table */}
-      <div className="rounded-lg border border-slate-800/80 bg-slate-900/50 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-950/80 text-[11px] font-medium uppercase text-slate-400 border-b border-slate-800">
-              <tr>
-                <th className="py-2.5 px-4 font-medium">Case Ref</th>
-                <th className="py-2.5 px-4 font-medium">Customer</th>
-                <th className="py-2.5 px-4 font-medium">Status</th>
-                <th className="py-2.5 px-4 font-medium">Verdict</th>
-                <th className="py-2.5 px-4 font-medium">Pattern / Flag</th>
-                <th className="py-2.5 px-4 font-medium text-right">Exposure</th>
-                <th className="py-2.5 px-4 text-right font-medium">Action</th>
+      {/* Table */}
+      <div className="card" style={{ overflow: 'hidden' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead>
+              <tr style={{ background: 'var(--bg-raised)' }}>
+                {['Case Ref', 'Customer', 'Status', 'Verdict', 'Pattern / Flag', 'Exposure', ''].map((h, i) => (
+                  <th
+                    key={i}
+                    style={{
+                      padding: '8px 14px',
+                      textAlign: i >= 5 ? 'right' : 'left',
+                      fontWeight: 500,
+                      fontSize: 10,
+                      letterSpacing: '0.07em',
+                      textTransform: 'uppercase',
+                      color: 'var(--text-muted)',
+                      borderBottom: '1px solid var(--border-default)',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 font-sans">
+            <tbody>
               {loading ? (
-                Array.from({ length: 5 }).map((_, idx) => (
-                  <tr key={idx} className="animate-pulse">
-                    <td className="py-3 px-4"><div className="h-4 w-24 bg-slate-800 rounded"></div></td>
-                    <td className="py-3 px-4"><div className="h-4 w-16 bg-slate-800 rounded"></div></td>
-                    <td className="py-3 px-4"><div className="h-4 w-28 bg-slate-800 rounded"></div></td>
-                    <td className="py-3 px-4"><div className="h-4 w-20 bg-slate-800 rounded"></div></td>
-                    <td className="py-3 px-4"><div className="h-4 w-40 bg-slate-800 rounded"></div></td>
-                    <td className="py-3 px-4"><div className="h-4 w-16 bg-slate-800 rounded ml-auto"></div></td>
-                    <td className="py-3 px-4"><div className="h-4 w-12 bg-slate-800 rounded ml-auto"></div></td>
+                Array.from({ length: 6 }).map((_, i) => (
+                  <tr key={i}>
+                    {[90, 70, 110, 80, 160, 60, 40].map((w, j) => (
+                      <td key={j} style={{ padding: '10px 14px' }}>
+                        <div className="skeleton" style={{ height: 12, width: w, borderRadius: 3, marginLeft: j >= 5 ? 'auto' : 0 }} />
+                      </td>
+                    ))}
                   </tr>
                 ))
-              ) : filteredCases.length === 0 ? (
+              ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-500">
-                    No matching investigation cases found.
+                  <td
+                    colSpan={7}
+                    style={{ padding: '48px 14px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}
+                  >
+                    No cases match the current filters.
                   </td>
                 </tr>
               ) : (
-                filteredCases.map((c) => (
+                filtered.map((c) => (
                   <tr
                     key={c.case_id}
                     onClick={() => onSelectCase(c.case_id)}
-                    className="hover:bg-slate-800/40 transition-colors cursor-pointer group"
+                    className="row-hover"
+                    style={{
+                      cursor: 'pointer',
+                      borderBottom: '1px solid var(--border-subtle)',
+                      transition: 'background 0.1s',
+                    }}
                   >
-                    <td className="py-3 px-4 font-mono font-medium text-indigo-300">
+                    <td className="id-chip" style={{ padding: '9px 14px' }}>
                       {c.case_id}
                     </td>
-                    <td className="py-3 px-4 font-mono text-slate-300">
-                      {c.customer_id || <span className="text-slate-600 font-sans italic">Pending</span>}
-                    </td>
-                    <td className="py-3 px-4">
-                      <StatusBadge status={c.status} verdict={c.verdict} />
-                    </td>
-                    <td className="py-3 px-4">
-                      {c.verdict ? (
-                        <StatusBadge verdict={c.verdict} showVerdict={true} />
-                      ) : (
-                        <span className="text-slate-500 font-mono text-[11px]">—</span>
+                    <td style={{ padding: '9px 14px', fontFamily: 'monospace', fontSize: 11, color: 'var(--text-secondary)' }}>
+                      {c.customer_id || (
+                        <span style={{ color: 'var(--text-disabled)', fontStyle: 'italic', fontFamily: 'inherit' }}>
+                          Unknown
+                        </span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-slate-300 max-w-xs truncate text-[11px]">
-                      {c.pattern || c.notes || <span className="text-slate-600 italic">No pattern flagged</span>}
+                    <td style={{ padding: '9px 14px' }}>
+                      <StatusBadge status={c.status} verdict={c.verdict} />
                     </td>
-                    <td className="py-3 px-4 font-mono font-medium text-slate-200 text-right">
+                    <td style={{ padding: '9px 14px' }}>
+                      {c.verdict ? (
+                        <StatusBadge verdict={c.verdict} showVerdict />
+                      ) : (
+                        <span style={{ color: 'var(--text-disabled)', fontFamily: 'monospace', fontSize: 11 }}>—</span>
+                      )}
+                    </td>
+                    <td
+                      style={{
+                        padding: '9px 14px',
+                        fontSize: 11,
+                        color: 'var(--text-secondary)',
+                        maxWidth: 260,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {c.pattern || c.notes || (
+                        <span style={{ color: 'var(--text-disabled)', fontStyle: 'italic' }}>No pattern flagged</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '9px 14px', textAlign: 'right', fontFamily: 'monospace', fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>
                       {formatCurrency(c.exposure)}
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td style={{ padding: '9px 14px', textAlign: 'right' }}>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSelectCase(c.case_id);
+                        onClick={(e) => { e.stopPropagation(); onSelectCase(c.case_id); }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          fontSize: 11,
+                          fontWeight: 500,
+                          color: 'var(--accent-text)',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: 0,
                         }}
-                        className="inline-flex items-center gap-1 text-[11px] font-medium text-indigo-400 group-hover:text-indigo-300 transition"
                       >
-                        <span>Open</span>
-                        <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" />
+                        Open
+                        <ArrowRight className="w-3 h-3" />
                       </button>
                     </td>
                   </tr>

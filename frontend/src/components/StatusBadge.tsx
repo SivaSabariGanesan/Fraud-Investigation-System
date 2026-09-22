@@ -1,6 +1,6 @@
 import React from 'react';
-import { Verdict, CaseStatus } from '../types/investigation';
 import { RefreshCw } from 'lucide-react';
+import { Verdict, CaseStatus } from '../types/investigation';
 
 interface StatusBadgeProps {
   verdict?: Verdict | string | null;
@@ -9,106 +9,109 @@ interface StatusBadgeProps {
   showVerdict?: boolean;
 }
 
-export const StatusBadge: React.FC<StatusBadgeProps> = ({ verdict, status, className = '', showVerdict = false }) => {
+type PillVariant = 'blue' | 'red' | 'amber' | 'green' | 'gray';
+
+const VARIANT_STYLES: Record<PillVariant, React.CSSProperties> = {
+  blue: {
+    background: 'var(--accent-subtle)',
+    color: 'var(--accent-text)',
+    borderColor: 'var(--accent-border)',
+  },
+  red: {
+    background: 'var(--danger-subtle)',
+    color: 'var(--danger-text)',
+    borderColor: 'var(--danger-border)',
+  },
+  amber: {
+    background: 'var(--warn-subtle)',
+    color: 'var(--warn-text)',
+    borderColor: 'var(--warn-border)',
+  },
+  green: {
+    background: 'var(--success-subtle)',
+    color: 'var(--success-text)',
+    borderColor: 'var(--success-border)',
+  },
+  gray: {
+    background: 'var(--bg-raised)',
+    color: 'var(--text-secondary)',
+    borderColor: 'var(--border-default)',
+  },
+};
+
+function Pill({
+  variant,
+  dot,
+  spin,
+  children,
+  className,
+}: {
+  variant: PillVariant;
+  dot?: boolean;
+  spin?: boolean;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const styles = VARIANT_STYLES[variant];
+  return (
+    <span className={`pill ${className ?? ''}`} style={styles}>
+      {spin ? (
+        <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+      ) : dot ? (
+        <span
+          className="w-1.5 h-1.5 rounded-full"
+          style={{ background: styles.color as string, flexShrink: 0 }}
+        />
+      ) : null}
+      {children}
+    </span>
+  );
+}
+
+export const StatusBadge: React.FC<StatusBadgeProps> = ({
+  verdict,
+  status,
+  className = '',
+  showVerdict = false,
+}) => {
   const normStatus = (status || '').toUpperCase();
   const normVerdict = (verdict || '').toUpperCase();
 
-  // If explicit verdict is requested
+  // Explicit verdict display
   if (showVerdict && normVerdict) {
-    if (normVerdict === 'APPROVED') {
-      return (
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 ${className}`}>
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-          Approved
-        </span>
-      );
-    }
-    if (normVerdict === 'DECLINED') {
-      return (
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-300 border border-rose-500/20 ${className}`}>
-          <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
-          Declined
-        </span>
-      );
-    }
-    if (normVerdict === 'NEEDS_REVIEW') {
-      return (
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-300 border border-amber-500/20 ${className}`}>
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-          Needs Review
-        </span>
-      );
-    }
+    if (normVerdict === 'APPROVED')
+      return <Pill variant="green" dot className={className}>Approved</Pill>;
+    if (normVerdict === 'DECLINED')
+      return <Pill variant="red" dot className={className}>Declined</Pill>;
+    if (normVerdict === 'NEEDS_REVIEW')
+      return <Pill variant="amber" dot className={className}>Needs Review</Pill>;
   }
 
-  // Active investigation execution
-  if (normStatus === 'INVESTIGATING') {
-    return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 ${className}`}>
-        <RefreshCw className="w-3 h-3 animate-spin text-indigo-400" />
-        Investigating...
-      </span>
-    );
-  }
+  // Status-based
+  if (normStatus === 'INVESTIGATING')
+    return <Pill variant="blue" spin className={className}>Investigating</Pill>;
 
-  if (normStatus === 'UNDER_INVESTIGATION') {
-    return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 ${className}`}>
-        <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-        Under Investigation
-      </span>
-    );
-  }
+  if (normStatus === 'UNDER_INVESTIGATION')
+    return <Pill variant="blue" dot className={className}>Under Investigation</Pill>;
 
-  if (normStatus === 'VERIFICATION_PENDING') {
-    return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-300 border border-amber-500/20 ${className}`}>
-        <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-        Verification Pending
-      </span>
-    );
-  }
+  if (normStatus === 'VERIFICATION_PENDING')
+    return <Pill variant="amber" dot className={className}>Verification Pending</Pill>;
 
-  if (normStatus === 'CONFIRMED_FRAUD' || normVerdict === 'DECLINED') {
-    return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-300 border border-rose-500/20 ${className}`}>
-        <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
-        Confirmed Fraud
-      </span>
-    );
-  }
+  if (normStatus === 'CONFIRMED_FRAUD' || normVerdict === 'DECLINED')
+    return <Pill variant="red" dot className={className}>Confirmed Fraud</Pill>;
 
-  if (normStatus === 'CLEARED' || normVerdict === 'APPROVED') {
-    return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 ${className}`}>
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-        Cleared
-      </span>
-    );
-  }
+  if (normStatus === 'CLEARED' || normVerdict === 'APPROVED')
+    return <Pill variant="green" dot className={className}>Cleared</Pill>;
 
-  if (normStatus === 'NEEDS_REVIEW' || normVerdict === 'NEEDS_REVIEW') {
-    return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-300 border border-amber-500/20 ${className}`}>
-        <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-        Needs Review
-      </span>
-    );
-  }
+  if (normStatus === 'NEEDS_REVIEW' || normVerdict === 'NEEDS_REVIEW')
+    return <Pill variant="amber" dot className={className}>Needs Review</Pill>;
 
-  if (normStatus === 'UNRESOLVED' || normStatus === 'PENDING') {
-    return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700/60 ${className}`}>
-        <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-        Pending Review
-      </span>
-    );
-  }
+  if (normStatus === 'UNRESOLVED' || normStatus === 'PENDING')
+    return <Pill variant="gray" dot className={className}>Pending Review</Pill>;
 
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800/80 text-slate-300 border border-slate-700/60 ${className}`}>
-      <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+    <Pill variant="gray" dot className={className}>
       {normStatus || 'Pending'}
-    </span>
+    </Pill>
   );
 };

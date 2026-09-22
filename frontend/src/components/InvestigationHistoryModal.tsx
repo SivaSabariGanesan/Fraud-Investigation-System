@@ -4,308 +4,279 @@ import { InvestigationDetailResponse } from '../types/investigation';
 import { StatusBadge } from './StatusBadge';
 import { AuditTimeline } from './AuditTimeline';
 import { formatDate } from '../lib/utils';
-import {
-  X,
-  Clock,
-  Cpu,
-  Scale,
-  BrainCircuit,
-  Database,
-  FileText,
-  ShieldAlert,
-  ListChecks,
-} from 'lucide-react';
+import { X, Clock, Cpu, Scale, BrainCircuit, Database, ShieldAlert, ListChecks } from 'lucide-react';
 
 interface InvestigationHistoryModalProps {
   investigationId: string | null;
   onClose: () => void;
 }
 
+const S = {
+  card: {
+    background: 'var(--bg-raised)',
+    border: '1px solid var(--border-default)',
+    borderRadius: 6,
+    padding: '12px 14px',
+  } as React.CSSProperties,
+  sectionHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: '0.07em',
+    textTransform: 'uppercase' as const,
+    marginBottom: 10,
+  },
+  label: { fontSize: 10, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase' as const, color: 'var(--text-muted)', marginBottom: 4 },
+  value: { fontSize: 13, fontFamily: 'monospace', fontWeight: 500, color: 'var(--text-primary)' },
+};
+
 export const InvestigationHistoryModal: React.FC<InvestigationHistoryModalProps> = ({
   investigationId,
   onClose,
 }) => {
   const [detail, setDetail] = useState<InvestigationDetailResponse | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!investigationId) return;
-
     setLoading(true);
     setError(null);
-
     apiService
       .getInvestigation(investigationId)
-      .then((data) => {
-        setDetail(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message || 'Failed to load historical investigation details');
-        setLoading(false);
-      });
+      .then((data) => { setDetail(data); setLoading(false); })
+      .catch((err) => { setError(err.message || 'Failed to load snapshot'); setLoading(false); });
   }, [investigationId]);
 
   if (!investigationId) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-4xl max-h-[90vh] flex flex-col bg-slate-900 border border-slate-800 rounded-xl shadow-2xl overflow-hidden">
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 50,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 16,
+        background: 'rgba(0,0,0,0.7)',
+        backdropFilter: 'blur(4px)',
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        style={{
+          position: 'relative',
+          width: '100%',
+          maxWidth: 860,
+          maxHeight: '90vh',
+          display: 'flex',
+          flexDirection: 'column',
+          background: 'var(--bg-surface)',
+          border: '1px solid var(--border-strong)',
+          borderRadius: 8,
+          boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+          overflow: 'hidden',
+        }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/90">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-              <FileText className="w-5 h-5" />
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '14px 20px',
+            borderBottom: '1px solid var(--border-default)',
+            flexShrink: 0,
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 14, fontWeight: 600, fontFamily: 'monospace', color: 'var(--text-primary)' }}>
+                {investigationId}
+              </span>
+              {detail && <StatusBadge verdict={detail.verdict} status={detail.status || detail.case_status} showVerdict />}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-slate-100 font-mono">
-                  {investigationId}
-                </h2>
-                {detail && (
-                  <StatusBadge
-                    verdict={detail.verdict}
-                    status={detail.status || detail.case_status}
-                    showVerdict={true}
-                  />
-                )}
-              </div>
-              <p className="text-xs text-slate-400">
-                Historical Investigation Snapshot (SQLite Immutable Record)
-              </p>
-            </div>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Investigation Snapshot — Immutable Record</span>
           </div>
-
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+            className="btn btn-ghost"
+            style={{ padding: '5px 8px' }}
+            aria-label="Close"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {/* Body */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           {loading && (
-            <div className="flex flex-col items-center justify-center py-16 space-y-3 text-slate-400">
-              <Clock className="w-8 h-8 animate-spin text-cyan-400" />
-              <p className="text-sm">Loading historical snapshot...</p>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '60px 0', color: 'var(--text-muted)' }}>
+              <Clock className="w-6 h-6 animate-spin" style={{ color: 'var(--accent-text)' }} />
+              <span style={{ fontSize: 12 }}>Loading snapshot…</span>
             </div>
           )}
-
           {error && (
-            <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm">
+            <div style={{ padding: '10px 14px', background: 'var(--danger-subtle)', border: '1px solid var(--danger-border)', borderRadius: 6, fontSize: 12, color: 'var(--danger-text)' }}>
               {error}
             </div>
           )}
-
           {detail && !loading && (
             <>
-              {/* Metadata Cards Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80 space-y-1">
-                  <span className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase">
-                    Customer ID
-                  </span>
-                  <p className="text-sm font-mono font-medium text-slate-200">
-                    {detail.customer_id || 'Not Specified'}
-                  </p>
-                </div>
-
-                <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80 space-y-1">
-                  <span className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase">
-                    Stop Reason
-                  </span>
-                  <p className="text-sm font-medium text-amber-400">
-                    {detail.stop_reason || 'WORKFLOW_COMPLETE'}
-                  </p>
-                </div>
-
-                <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80 space-y-1">
-                  <span className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase">
-                    Exposure
-                  </span>
-                  <p className="text-sm font-mono font-medium text-slate-200">
-                    ${detail.exposure ? detail.exposure.toFixed(2) : '0.00'}
-                  </p>
-                </div>
-
-                <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80 space-y-1">
-                  <span className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase">
-                    Run Date
-                  </span>
-                  <p className="text-xs font-mono text-slate-300">
-                    {formatDate(detail.created_at)}
-                  </p>
-                </div>
+              {/* Metadata grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
+                {[
+                  { label: 'Customer', value: detail.customer_id || '—' },
+                  { label: 'Stop Reason', value: detail.stop_reason || 'COMPLETE', color: 'var(--warn-text)' },
+                  { label: 'Exposure', value: `$${(detail.exposure ?? 0).toFixed(2)}` },
+                  { label: 'Run Date', value: formatDate(detail.created_at) },
+                ].map(({ label, value, color }) => (
+                  <div key={label} style={S.card}>
+                    <p style={S.label}>{label}</p>
+                    <p style={{ ...S.value, color: color || 'var(--text-primary)', fontSize: 12 }}>{value}</p>
+                  </div>
+                ))}
               </div>
 
-              {/* LLM & Model Metrics */}
-              <div className="p-4 rounded-lg bg-slate-950/60 border border-slate-800/80 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-purple-400 uppercase tracking-wider">
-                    <Cpu className="w-4 h-4" /> Groq Model Performance & Token Metrics
-                  </div>
-                  <span className="text-[11px] font-mono text-slate-400">
-                    Latency: {detail.llm_latency ? `${detail.llm_latency.toFixed(2)}s` : 'N/A'}
-                  </span>
+              {/* LLM metrics */}
+              <div style={{ ...S.card, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ ...S.sectionHeader, color: '#c4b5fd' }}>
+                  <Cpu className="w-3.5 h-3.5" /> Model Performance
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-1 text-xs">
-                  <div className="text-slate-400">
-                    Provider:{' '}
-                    <span className="text-slate-200 font-mono">
-                      {detail.llm_provider || 'groq'}
-                    </span>
-                  </div>
-                  <div className="text-slate-400">
-                    Model:{' '}
-                    <span className="text-slate-200 font-mono">
-                      {detail.llm_model || 'openai/gpt-oss-120b'}
-                    </span>
-                  </div>
-                  <div className="text-slate-400">
-                    Prompt Tokens:{' '}
-                    <span className="text-slate-200 font-mono">
-                      {detail.prompt_tokens || 0}
-                    </span>
-                  </div>
-                  <div className="text-slate-400">
-                    Total Tokens:{' '}
-                    <span className="text-slate-200 font-mono">
-                      {detail.total_tokens || 0}
-                    </span>
-                  </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6 }}>
+                  {[
+                    ['Provider', detail.llm_provider || 'groq'],
+                    ['Model', detail.llm_model || 'openai/gpt-oss-120b'],
+                    ['Prompt Tokens', String(detail.prompt_tokens ?? 0)],
+                    ['Total Tokens', String(detail.total_tokens ?? 0)],
+                  ].map(([k, v]) => (
+                    <div key={k}>
+                      <p style={S.label}>{k}</p>
+                      <p style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{v}</p>
+                    </div>
+                  ))}
                 </div>
+                {detail.llm_latency != null && (
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                    Latency: <strong style={{ color: 'var(--text-secondary)' }}>{detail.llm_latency.toFixed(2)}s</strong>
+                  </p>
+                )}
               </div>
 
-              {/* Reasoning Summary */}
+              {/* Reasoning */}
               {detail.reasoning_summary && (
-                <div className="p-4 rounded-lg bg-slate-950/60 border border-slate-800/80 space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-cyan-400 uppercase tracking-wider">
-                    <BrainCircuit className="w-4 h-4" /> AI Reasoning Summary
+                <div style={{ ...S.card }}>
+                  <div style={{ ...S.sectionHeader, color: '#7dd3fc' }}>
+                    <BrainCircuit className="w-3.5 h-3.5" /> AI Reasoning Summary
                   </div>
-                  <p className="text-xs text-slate-300 leading-relaxed">
+                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
                     {detail.reasoning_summary}
                   </p>
                 </div>
               )}
 
-              {/* R1-R10 Policy Rules Evaluation */}
-              <div className="p-4 rounded-lg bg-slate-950/60 border border-slate-800/80 space-y-3">
-                <div className="flex items-center gap-2 text-xs font-semibold text-indigo-400 uppercase tracking-wider">
-                  <Scale className="w-4 h-4" /> Deterministic Rule Evaluation (R1–R10)
+              {/* Rules */}
+              <div style={S.card}>
+                <div style={{ ...S.sectionHeader, color: 'var(--accent-text)' }}>
+                  <Scale className="w-3.5 h-3.5" /> Policy Rule Evaluation (R1–R10)
                 </div>
-
                 {detail.rules && detail.rules.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {detail.rules.map((rule) => (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                    {detail.rules.map((r) => (
                       <div
-                        key={rule.rule_id}
-                        className={`p-2.5 rounded-md border text-xs space-y-1 ${
-                          rule.triggered
-                            ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
-                            : 'bg-slate-900/50 border-slate-800 text-slate-400'
-                        }`}
+                        key={r.rule_id}
+                        style={{
+                          padding: '8px 10px',
+                          borderRadius: 4,
+                          border: `1px solid ${r.triggered ? 'var(--warn-border)' : 'var(--border-default)'}`,
+                          background: r.triggered ? 'var(--warn-subtle)' : 'var(--bg-base)',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          justifyContent: 'space-between',
+                          gap: 8,
+                        }}
                       >
-                        <div className="flex items-center justify-between font-mono font-semibold">
-                          <span>{rule.rule_id}</span>
-                          <span
-                            className={`px-1.5 py-0.5 rounded text-[10px] font-sans ${
-                              rule.triggered
-                                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                                : 'bg-slate-800 text-slate-500'
-                            }`}
-                          >
-                            {rule.triggered ? 'TRIGGERED' : 'PASSED'}
-                          </span>
+                        <div>
+                          <p style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 2px' }}>
+                            {r.rule_id}
+                          </p>
+                          {r.reason && (
+                            <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: 0 }}>{r.reason}</p>
+                          )}
                         </div>
-                        {rule.reason && <p className="text-[11px] leading-snug">{rule.reason}</p>}
+                        <span
+                          className="pill"
+                          style={r.triggered
+                            ? { background: 'var(--warn-subtle)', color: 'var(--warn-text)', borderColor: 'var(--warn-border)', fontSize: 10 }
+                            : { background: 'var(--bg-overlay)', color: 'var(--text-muted)', borderColor: 'var(--border-default)', fontSize: 10 }
+                          }
+                        >
+                          {r.triggered ? 'TRIGGERED' : 'PASS'}
+                        </span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-500">No rule evaluation records found.</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>No rule records.</p>
                 )}
               </div>
 
-              {/* Recommended Actions */}
-              <div className="p-4 rounded-lg bg-slate-950/60 border border-slate-800/80 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-                  <ListChecks className="w-4 h-4" /> Recommended Final Actions
-                </div>
-                {detail.actions_final && detail.actions_final.length > 0 ? (
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    {detail.actions_final.map((act, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-xs font-mono"
-                      >
-                        {act}
+              {/* Actions */}
+              {detail.actions_final && detail.actions_final.length > 0 && (
+                <div style={S.card}>
+                  <div style={{ ...S.sectionHeader, color: 'var(--success-text)' }}>
+                    <ListChecks className="w-3.5 h-3.5" /> Recommended Actions
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {detail.actions_final.map((a, i) => (
+                      <span key={i} className="pill" style={{ background: 'var(--success-subtle)', color: 'var(--success-text)', borderColor: 'var(--success-border)', fontFamily: 'monospace', fontSize: 10 }}>
+                        {a}
                       </span>
                     ))}
                   </div>
-                ) : (
-                  <p className="text-xs text-slate-500">No final actions recorded.</p>
-                )}
-              </div>
+                </div>
+              )}
 
-              {/* SAR State */}
-              <div className="p-4 rounded-lg bg-slate-950/60 border border-slate-800/80 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-semibold text-rose-400 uppercase tracking-wider">
-                  <ShieldAlert className="w-4 h-4" /> Suspicious Activity Report (SAR) State
+              {/* SAR */}
+              <div style={S.card}>
+                <div style={{ ...S.sectionHeader, color: 'var(--danger-text)' }}>
+                  <ShieldAlert className="w-3.5 h-3.5" /> SAR State
                 </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="font-semibold text-slate-300">Status:</span>
-                  <span className="font-mono text-amber-400">
-                    {detail.sar_status || 'NOT_RECOMMENDED'}
-                  </span>
-                </div>
+                <p style={{ fontSize: 12, margin: '0 0 4px' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Status: </span>
+                  <span style={{ fontFamily: 'monospace', color: 'var(--warn-text)' }}>{detail.sar_status || 'NOT_RECOMMENDED'}</span>
+                </p>
                 {detail.sar_reason && (
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    {detail.sar_reason}
-                  </p>
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>{detail.sar_reason}</p>
                 )}
               </div>
 
-              {/* Evidence Snapshot */}
-              <div className="p-4 rounded-lg bg-slate-950/60 border border-slate-800/80 space-y-3">
-                <div className="flex items-center gap-2 text-xs font-semibold text-cyan-400 uppercase tracking-wider">
-                  <Database className="w-4 h-4" /> Preserved Evidence Snapshot ({detail.evidence?.length || 0} items)
+              {/* Evidence snapshot */}
+              <div style={S.card}>
+                <div style={{ ...S.sectionHeader, color: '#7dd3fc' }}>
+                  <Database className="w-3.5 h-3.5" /> Evidence Snapshot ({detail.evidence?.length ?? 0})
                 </div>
-
-                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                <div style={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {detail.evidence && detail.evidence.length > 0 ? (
-                    detail.evidence.map((ev, idx) => (
-                      <div
-                        key={idx}
-                        className="p-2.5 rounded bg-slate-900/80 border border-slate-800 text-xs space-y-1"
-                      >
-                        <div className="flex items-center justify-between font-mono text-[11px]">
-                          <span className="font-bold text-slate-300">
-                            [{ev.evidence_type || 'Evidence'}] {ev.evidence_id}
-                          </span>
-                          <span className="text-slate-500">{ev.source || 'TigerGraph'}</span>
-                        </div>
-                        <p className="text-slate-300">{ev.description}</p>
-                        {ev.timestamp && (
-                          <p className="text-[10px] font-mono text-slate-500">
-                            Timestamp: {ev.timestamp}
-                          </p>
-                        )}
+                    detail.evidence.map((ev, i) => (
+                      <div key={i} style={{ padding: '7px 10px', background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: 4 }}>
+                        <p style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 600, color: 'var(--text-secondary)', margin: '0 0 2px' }}>
+                          [{ev.evidence_type || 'Evidence'}] {ev.evidence_id}
+                        </p>
+                        {ev.description && <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>{ev.description}</p>}
                       </div>
                     ))
                   ) : (
-                    <p className="text-xs text-slate-500">No evidence snapshot items.</p>
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>No evidence items.</p>
                   )}
                 </div>
               </div>
 
-              {/* Audit Event Log */}
+              {/* Audit log */}
               {detail.audit_events && detail.audit_events.length > 0 && (
-                <div className="p-4 rounded-lg bg-slate-950/60 border border-slate-800/80 space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                    <Clock className="w-4 h-4 text-cyan-400" /> Run Audit Log
+                <div style={S.card}>
+                  <div style={{ ...S.sectionHeader, color: 'var(--text-secondary)' }}>
+                    <Clock className="w-3.5 h-3.5" style={{ color: 'var(--accent-text)' }} /> Run Audit Log
                   </div>
                   <AuditTimeline events={detail.audit_events} />
                 </div>

@@ -76,10 +76,10 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+    <div style={{ minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column' }}>
       <Navbar onSearchCase={navigateToCaseDetails} />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <Sidebar
           activeTab={activeTab}
           onNavigateDashboard={navigateToDashboard}
@@ -88,8 +88,8 @@ export function App() {
           selectedCaseId={selectedCaseId}
         />
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-950">
-          <div className="max-w-7xl mx-auto">
+        <main style={{ flex: 1, overflowY: 'auto', padding: '24px 28px', background: 'var(--bg-base)' }}>
+          <div style={{ maxWidth: 1280, margin: '0 auto' }}>
             {activeTab === 'dashboard' && (
               <Dashboard
                 cases={cases}
