@@ -46,7 +46,7 @@
     --success-border: rgba(5, 150, 105, 0.22);
     --success-text:   #065f46;
 
-    /* shadcn bridge tokens */
+    /* shadcn bridge tokens (--accent renamed to --sc-accent to avoid collision) */
     --background: 0 0% 100%;
     --foreground: 222 47% 11%;
     --card: 0 0% 98%;
@@ -59,8 +59,8 @@
     --secondary-foreground: 222 47% 11%;
     --muted: 0 0% 96%;
     --muted-foreground: 0 0% 42%;
-    --accent: 217 91% 60%;
-    --accent-foreground: 0 0% 100%;
+    --sc-accent: 217 91% 60%;
+    --sc-accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     --border: 0 0% 82%;
