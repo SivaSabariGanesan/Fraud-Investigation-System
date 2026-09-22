@@ -3,6 +3,7 @@ import { apiService } from '../services/api';
 import { InvestigationDetailResponse } from '../types/investigation';
 import { StatusBadge } from './StatusBadge';
 import { AuditTimeline } from './AuditTimeline';
+import { formatDate } from '../lib/utils';
 import {
   X,
   Clock,
@@ -47,21 +48,6 @@ export const InvestigationHistoryModal: React.FC<InvestigationHistoryModalProps>
   }, [investigationId]);
 
   if (!investigationId) return null;
-
-  const formatDate = (dateStr?: string | null) => {
-    if (!dateStr) return 'N/A';
-    try {
-      return new Date(dateStr).toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return dateStr;
-    }
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">

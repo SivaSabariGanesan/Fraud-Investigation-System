@@ -197,7 +197,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cases, loading, error, onR
                 </tr>
               ) : (
                 cases.slice(0, 10).map((c) => (
-                  <tr key={c.case_id} className="hover:bg-slate-800/50 transition-colors">
+                  <tr key={c.case_id} onClick={() => onSelectCase(c.case_id)} className="hover:bg-slate-800/50 transition-colors cursor-pointer">
                     <td className="py-3.5 px-4 font-mono font-semibold text-indigo-300">{c.case_id}</td>
                     <td className="py-3.5 px-4 font-mono text-slate-300 text-xs">
                       {c.customer_id || 'Connected'}
@@ -216,7 +216,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cases, loading, error, onR
                     <td className="py-3.5 px-4 font-mono font-semibold text-slate-200">{formatCurrency(c.exposure)}</td>
                     <td className="py-3.5 px-4 text-right">
                       <button
-                        onClick={() => onSelectCase(c.case_id)}
+                        onClick={(e) => { e.stopPropagation(); onSelectCase(c.case_id); }}
                         className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-md bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/20 transition"
                       >
                         Inspect <ArrowRight className="w-3.5 h-3.5" />

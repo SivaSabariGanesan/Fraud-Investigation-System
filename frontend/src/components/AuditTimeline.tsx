@@ -1,5 +1,6 @@
 import React from 'react';
 import { AuditEventItem } from '../types/investigation';
+import { formatDate } from '../lib/utils';
 import {
   PlayCircle,
   Database,
@@ -8,9 +9,12 @@ import {
   CheckCircle2,
   AlertCircle,
   FileQuestion,
+  MessageSquare,
+  XCircle,
   User,
   Bot,
   Cpu,
+  Send,
 } from 'lucide-react';
 
 interface AuditTimelineProps {
@@ -30,11 +34,16 @@ export const AuditTimeline: React.FC<AuditTimelineProps> = ({ events, className 
   const getEventIcon = (eventType: string) => {
     switch (eventType) {
       case 'INVESTIGATION_STARTED':
+      case 'INVESTIGATION_STARTED_FROM_EVIDENCE_RESPONSE':
         return <PlayCircle className="w-4 h-4 text-cyan-400" />;
       case 'EVIDENCE_COLLECTED':
         return <Database className="w-4 h-4 text-emerald-400" />;
       case 'EVIDENCE_REQUEST_CREATED':
         return <FileQuestion className="w-4 h-4 text-amber-400" />;
+      case 'EVIDENCE_REQUEST_RESPONDED':
+        return <MessageSquare className="w-4 h-4 text-emerald-400" />;
+      case 'EVIDENCE_REQUEST_CANCELLED':
+        return <XCircle className="w-4 h-4 text-slate-400" />;
       case 'LLM_REASONING_COMPLETED':
         return <BrainCircuit className="w-4 h-4 text-purple-400" />;
       case 'POLICY_EVALUATED':
@@ -48,7 +57,7 @@ export const AuditTimeline: React.FC<AuditTimelineProps> = ({ events, className 
       case 'CASE_OPENED':
         return <PlayCircle className="w-4 h-4 text-sky-400" />;
       default:
-        return <PlayCircle className="w-4 h-4 text-slate-400" />;
+        return <Send className="w-4 h-4 text-slate-400" />;
     }
   };
 
@@ -75,33 +84,17 @@ export const AuditTimeline: React.FC<AuditTimelineProps> = ({ events, className 
     );
   };
 
-  const formatDate = (dateStr: string) => {
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      });
-    } catch {
-      return dateStr;
-    }
-  };
-
   return (
     <div className={`space-y-3 ${className}`}>
       <div className="relative pl-6 border-l border-slate-800 space-y-6">
         {events.map((event) => (
           <div key={event.id} className="relative group">
-            {/* Timeline Dot */}
+            {/* Timeline dot */}
             <div className="absolute -left-[31px] top-0.5 w-6 h-6 rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center shadow-sm">
               {getEventIcon(event.event_type)}
             </div>
 
-            {/* Event Header */}
+            {/* Event header */}
             <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-xs text-slate-200 tracking-wide uppercase">
@@ -114,7 +107,7 @@ export const AuditTimeline: React.FC<AuditTimelineProps> = ({ events, className 
               </span>
             </div>
 
-            {/* Event Description */}
+            {/* Event description */}
             {event.description && (
               <p className="text-xs text-slate-300 leading-relaxed bg-slate-900/60 p-2.5 rounded-md border border-slate-800/80">
                 {event.description}

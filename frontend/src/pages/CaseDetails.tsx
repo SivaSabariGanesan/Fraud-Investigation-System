@@ -231,9 +231,6 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
   // Similar Prior Cases
   const similarCases = investigation?.similar_prior_cases || [];
 
-  // Evidence Requests
-  const evidenceRequests: EvidenceRequest[] = investigation?.evidence_requests || [];
-
   // Evidence Request: Create
   const handleCreateRequest = async () => {
     if (!createPayload.request_text.trim() || createPayload.request_text.trim().length < 5) {
@@ -418,30 +415,20 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
           ================================================== */}
       <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 space-y-4">
         <h3 className="font-bold text-slate-200 text-sm uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-3">
-          <FileText className="w-4 h-4 text-indigo-400" /> Case Summary Overview
+          <FileText className="w-4 h-4 text-indigo-400" /> Case Summary
         </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800">
-            <span className="text-xs text-slate-400 font-semibold block uppercase">Case ID</span>
-            <span className="text-base font-bold font-mono text-indigo-300 mt-1 block">{caseId}</span>
-          </div>
-
-          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800">
-            <span className="text-xs text-slate-400 font-semibold block uppercase">Customer ID</span>
-            <span className="text-base font-bold font-mono text-indigo-300 mt-1 block">{customerId}</span>
-          </div>
-
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="p-4 rounded-lg bg-slate-950 border border-slate-800">
             <span className="text-xs text-slate-400 font-semibold block uppercase">Case Status</span>
-            <div className="mt-1">
+            <div className="mt-1.5">
               <StatusBadge status={caseData?.status} />
             </div>
           </div>
 
           <div className="p-4 rounded-lg bg-slate-950 border border-slate-800">
             <span className="text-xs text-slate-400 font-semibold block uppercase">Verdict</span>
-            <div className="mt-1">
+            <div className="mt-1.5">
               {caseData?.verdict ? (
                 <StatusBadge verdict={caseData.verdict} showVerdict={true} />
               ) : (
@@ -452,28 +439,21 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
 
           <div className="p-4 rounded-lg bg-slate-950 border border-slate-800">
             <span className="text-xs text-slate-400 font-semibold block uppercase">Exposure</span>
-            <span className="text-base font-bold font-mono text-amber-400 mt-1 block">
+            <span className="text-base font-bold font-mono text-amber-400 mt-1.5 block">
               {formatCurrency(caseData?.exposure)}
             </span>
           </div>
 
           <div className="p-4 rounded-lg bg-slate-950 border border-slate-800">
             <span className="text-xs text-slate-400 font-semibold block uppercase">Pattern</span>
-            <span className="text-sm font-semibold text-slate-200 mt-1 block font-mono">
-              {caseData?.pattern || investigation?.pattern || 'Pending Analysis'}
-            </span>
-          </div>
-
-          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800">
-            <span className="text-xs text-slate-400 font-semibold block uppercase">Stop Reason</span>
-            <span className="text-sm font-mono text-indigo-300 mt-1 block">
-              {investigation?.stop_reason || 'N/A'}
+            <span className="text-sm font-semibold text-slate-200 mt-1.5 block font-mono">
+              {caseData?.pattern || investigation?.pattern || '—'}
             </span>
           </div>
 
           <div className="p-4 rounded-lg bg-slate-950 border border-slate-800">
             <span className="text-xs text-slate-400 font-semibold block uppercase">Fraud Probability</span>
-            <span className="text-sm font-semibold mt-1 block">
+            <span className="text-sm font-semibold mt-1.5 block">
               {caseData?.fraud_probability !== null && caseData?.fraud_probability !== undefined ? (
                 <span className="text-base font-bold font-mono text-indigo-400">
                   {(caseData.fraud_probability * 100).toFixed(1)}%
@@ -483,8 +463,30 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
               )}
             </span>
           </div>
+
+          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800">
+            <span className="text-xs text-slate-400 font-semibold block uppercase">Stop Reason</span>
+            <span className="text-sm font-mono text-amber-300 mt-1.5 block">
+              {investigation?.stop_reason || '—'}
+            </span>
+          </div>
         </div>
       </div>
+
+      {/* ==================================================
+          Pre-investigation prompt — only when no run has happened yet
+          ================================================== */}
+      {!investigation && (
+        <div className="p-6 rounded-xl border border-dashed border-slate-700 bg-slate-900/50 text-center space-y-2">
+          <p className="text-sm font-semibold text-slate-300">No investigation has been run for this case yet.</p>
+          <p className="text-xs text-slate-500">Click <strong className="text-indigo-400">Investigate Case</strong> to fetch graph evidence, run Groq reasoning, and evaluate R1–R10 policy rules.</p>
+        </div>
+      )}
+
+      {/* ==================================================
+          Sections 6–11 only render after an investigation has run
+          ================================================== */}
+      {investigation && (<>
 
       {/* ==================================================
           6. TRANSACTION PANEL
@@ -845,11 +847,11 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
                 </p>
               </div>
 
-              {/* Relevant Policy Rules */}
+              {/* Stop Reason */}
               <div className="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
-                <span className="font-semibold text-amber-300 uppercase block">Relevant Policy Rules</span>
+                <span className="font-semibold text-amber-300 uppercase block">Stop Reason</span>
                 <p className="text-slate-300 font-mono">
-                  {investigation.stop_reason || 'R1-R10 Decision Rules Evaluated'}
+                  {investigation.stop_reason || 'WORKFLOW_COMPLETE'}
                 </p>
               </div>
 
@@ -865,7 +867,7 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
               <div className="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
                 <span className="font-semibold text-cyan-300 uppercase block">Missing Evidence / Uncertainties</span>
                 <p className="text-slate-400 font-mono italic">
-                  {evidenceRequests.length > 0 ? 'Customer verification response pending' : 'None observed'}
+                  {liveRequests.length > 0 ? 'Customer verification response pending' : 'None observed'}
                 </p>
               </div>
             </div>
@@ -887,60 +889,9 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-          <div className="p-3.5 rounded-lg bg-slate-950 border border-slate-800">
-            <span className="text-slate-400 uppercase font-mono block">Case Status</span>
-            <div className="mt-1">
-              <StatusBadge status={investigation?.status || caseData?.status} />
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-lg bg-slate-950 border border-slate-800">
-            <span className="text-slate-400 uppercase font-mono block">Verdict</span>
-            <div className="mt-1">
-              {investigation?.verdict || caseData?.verdict ? (
-                <StatusBadge verdict={investigation?.verdict || caseData?.verdict} showVerdict={true} />
-              ) : (
-                <span className="text-slate-500 font-mono">Unassigned</span>
-              )}
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-lg bg-slate-950 border border-slate-800">
-            <span className="text-slate-400 uppercase font-mono block">Pattern</span>
-            <span className="font-bold font-mono text-indigo-300 text-sm mt-1 block">
-              {investigation?.pattern || caseData?.pattern || 'Unclassified'}
-            </span>
-          </div>
-
-          <div className="p-3.5 rounded-lg bg-slate-950 border border-slate-800">
-            <span className="text-slate-400 uppercase font-mono block">Stop Reason</span>
-            <span className="font-bold font-mono text-amber-300 text-sm mt-1 block">
-              {investigation?.stop_reason || 'WORKFLOW_COMPLETE'}
-            </span>
-          </div>
-        </div>
-
-        {/* Final Actions in Policy Decision */}
-        {investigation?.next_best_actions_final && investigation.next_best_actions_final.length > 0 && (
-          <div className="p-4 rounded-lg bg-slate-950 border border-emerald-500/20 space-y-2">
-            <span className="text-xs font-semibold text-emerald-300 uppercase block">Determined Policy Actions</span>
-            <div className="flex flex-wrap gap-2">
-              {investigation.next_best_actions_final.map((action, idx) => (
-                <span
-                  key={idx}
-                  className="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-mono font-bold text-xs flex items-center gap-1.5"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" /> {action}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Live R1–R10 Rule Evaluation Grid */}
-        {investigation?.rules_evaluated && investigation.rules_evaluated.length > 0 && (
-          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-3">
+        {investigation.rules_evaluated && investigation.rules_evaluated.length > 0 && (
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-indigo-300 uppercase tracking-wider flex items-center gap-2">
                 <Scale className="w-3.5 h-3.5" /> R1–R10 Rule Evaluation
@@ -1056,6 +1007,9 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
           </div>
         </div>
       </div>
+
+      {/* Close the investigation-gated block */}
+      </>)}
 
       {/* ==================================================
           12. EVIDENCE REQUESTS — Full Lifecycle Management
@@ -1222,12 +1176,15 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
                           </span>
                         )}
 
-                        {/* New investigation link */}
+                        {/* Triggered investigation link — click to view in history */}
                         {er.triggered_investigation_id && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-mono">
+                          <button
+                            onClick={() => setSelectedInvestigationId(er.triggered_investigation_id!)}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-mono hover:bg-indigo-500/20 transition"
+                          >
                             <ExternalLink className="w-3 h-3" />
-                            Investigation: {er.triggered_investigation_id}
-                          </span>
+                            View: {er.triggered_investigation_id}
+                          </button>
                         )}
                       </div>
 
@@ -1377,29 +1334,38 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
       {/* ==================================================
           13. SAR SECTION
           ================================================== */}
+      {investigation && (
       <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 space-y-4">
         <h3 className="font-bold text-slate-200 text-sm uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-3">
-          <ShieldAlert className="w-4 h-4 text-rose-400" /> Suspicious Activity Report (SAR) Panel
+          <ShieldAlert className="w-4 h-4 text-rose-400" /> Suspicious Activity Report (SAR)
         </h3>
 
-        {!investigation?.SAR ? (
-          <div className="p-4 rounded-lg bg-slate-950 text-slate-400 text-xs font-mono">
-            SAR Status: <strong className="text-slate-300">Not recommended / Unknown</strong> (No SAR action generated by backend decision engine).
+        <div className="p-4 rounded-lg bg-slate-950 border border-rose-500/20 space-y-3 text-xs">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-slate-400 uppercase font-mono">SAR Status</span>
+            {(() => {
+              const sarStatus = investigation.SAR?.status || 'NOT_REQUIRED';
+              const isRecommended = sarStatus === 'RECOMMENDED';
+              return (
+                <span className={`px-2.5 py-1 rounded font-mono font-bold border ${
+                  isRecommended
+                    ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                    : 'bg-slate-800 text-slate-400 border-slate-700'
+                }`}>
+                  {sarStatus}
+                </span>
+              );
+            })()}
           </div>
-        ) : (
-          <div className="p-4 rounded-lg bg-slate-950 border border-rose-500/20 space-y-2 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-rose-400 uppercase font-mono">SAR Recommendation Status</span>
-              <span className="px-2.5 py-1 rounded bg-rose-500/10 text-rose-400 font-mono font-bold border border-rose-500/20">
-                {investigation.SAR.status || 'Recommended'}
-              </span>
+          {investigation.SAR?.reason && (
+            <div>
+              <span className="text-slate-400 uppercase font-mono block mb-1">Reason</span>
+              <p className="text-slate-300 font-sans leading-relaxed">{investigation.SAR.reason}</p>
             </div>
-            <pre className="p-3 rounded bg-slate-900 text-slate-300 font-mono text-xs overflow-x-auto">
-              {JSON.stringify(investigation.SAR, null, 2)}
-            </pre>
-          </div>
-        )}
+          )}
+        </div>
       </div>
+      )}
 
       {/* ==================================================
           INVESTIGATION HISTORY SECTION
