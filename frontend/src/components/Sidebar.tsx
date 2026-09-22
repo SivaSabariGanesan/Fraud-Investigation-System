@@ -79,7 +79,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               value="TigerGraph"
             />
             <ServiceRow
-              icon={<Cpu className="w-3 h-3" style={{ color: '#c4b5fd' }} />}
+              icon={<Cpu className="w-3 h-3" style={{ color: '#7c3aed' }} />}
               label="Reasoning"
               value="Groq 120B"
             />

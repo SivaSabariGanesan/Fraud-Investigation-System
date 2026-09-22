@@ -140,7 +140,7 @@ export const InvestigationHistoryModal: React.FC<InvestigationHistoryModalProps>
 
               {/* LLM metrics */}
               <div style={{ ...S.card, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ ...S.sectionHeader, color: '#c4b5fd' }}>
+                <div style={{ ...S.sectionHeader, color: '#7c3aed' }}>
                   <Cpu className="w-3.5 h-3.5" /> Model Performance
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6 }}>
@@ -166,7 +166,7 @@ export const InvestigationHistoryModal: React.FC<InvestigationHistoryModalProps>
               {/* Reasoning */}
               {detail.reasoning_summary && (
                 <div style={{ ...S.card }}>
-                  <div style={{ ...S.sectionHeader, color: '#7dd3fc' }}>
+                  <div style={{ ...S.sectionHeader, color: 'var(--accent)' }}>
                     <BrainCircuit className="w-3.5 h-3.5" /> AI Reasoning Summary
                   </div>
                   <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
@@ -253,7 +253,7 @@ export const InvestigationHistoryModal: React.FC<InvestigationHistoryModalProps>
 
               {/* Evidence snapshot */}
               <div style={S.card}>
-                <div style={{ ...S.sectionHeader, color: '#7dd3fc' }}>
+                <div style={{ ...S.sectionHeader, color: 'var(--accent)' }}>
                   <Database className="w-3.5 h-3.5" /> Evidence Snapshot ({detail.evidence?.length ?? 0})
                 </div>
                 <div style={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>

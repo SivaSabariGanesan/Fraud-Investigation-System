@@ -494,9 +494,9 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
             {[
               { icon: <CreditCard className="w-3.5 h-3.5" />, label: 'Connected Cards', value: cardEvs.length > 0 ? cardEvs.map((c) => `Card #${c.evidence_id || '19739'}`).join(', ') : '1 Card (19739)', color: 'var(--accent-text)' },
-              { icon: <Smartphone className="w-3.5 h-3.5" />, label: 'Device Profiles', value: devEvs.length > 0 ? `${devEvs.length} Profiles` : '2 Profiles', color: '#c4b5fd' },
+              { icon: <Smartphone className="w-3.5 h-3.5" />, label: 'Device Profiles', value: devEvs.length > 0 ? `${devEvs.length} Profiles` : '2 Profiles', color: '#7c3aed' },
               { icon: <FileText className="w-3.5 h-3.5" />, label: 'Billing Region', value: billingEvs.length > 0 ? billingEvs[0].evidence_id || '—' : 'Consistent / Match', color: 'var(--success-text)' },
-              { icon: <Layers className="w-3.5 h-3.5" />, label: 'Email Domain', value: emailEvs.length > 0 ? emailEvs[0].evidence_id || '—' : 'Legitimate / Corporate', color: '#7dd3fc' },
+              { icon: <Layers className="w-3.5 h-3.5" />, label: 'Email Domain', value: emailEvs.length > 0 ? emailEvs[0].evidence_id || '—' : 'Legitimate / Corporate', color: 'var(--accent)' },
             ].map(({ icon, label, value, color }) => (
               <div key={label} style={{ ...card, padding: '10px 12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>
@@ -519,7 +519,7 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
           {/* AI Reasoning */}
           <div style={{ ...card, padding: '14px 16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border-default)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#c4b5fd' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#7c3aed' }}>
                 <Cpu className="w-4 h-4" />
                 AI Evidence Reasoning
               </div>

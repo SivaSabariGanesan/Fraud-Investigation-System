@@ -11,18 +11,18 @@ interface AuditTimelineProps {
 }
 
 const EVENT_CONFIG: Record<string, { icon: React.ReactNode; color: string }> = {
-  INVESTIGATION_STARTED:                       { icon: <PlayCircle className="w-3.5 h-3.5" />,   color: '#38bdf8' },
-  INVESTIGATION_STARTED_FROM_EVIDENCE_RESPONSE:{ icon: <PlayCircle className="w-3.5 h-3.5" />,   color: '#38bdf8' },
+  INVESTIGATION_STARTED:                       { icon: <PlayCircle className="w-3.5 h-3.5" />,   color: 'var(--accent)' },
+  INVESTIGATION_STARTED_FROM_EVIDENCE_RESPONSE:{ icon: <PlayCircle className="w-3.5 h-3.5" />,   color: 'var(--accent)' },
   EVIDENCE_COLLECTED:                          { icon: <Database className="w-3.5 h-3.5" />,      color: 'var(--success)' },
   EVIDENCE_REQUEST_CREATED:                    { icon: <FileQuestion className="w-3.5 h-3.5" />,  color: 'var(--warn)' },
   EVIDENCE_REQUEST_RESPONDED:                  { icon: <MessageSquare className="w-3.5 h-3.5" />, color: 'var(--success)' },
   EVIDENCE_REQUEST_CANCELLED:                  { icon: <XCircle className="w-3.5 h-3.5" />,       color: 'var(--text-muted)' },
-  LLM_REASONING_COMPLETED:                     { icon: <BrainCircuit className="w-3.5 h-3.5" />,  color: '#c4b5fd' },
-  POLICY_EVALUATED:                            { icon: <Scale className="w-3.5 h-3.5" />,         color: 'var(--accent-text)' },
-  DECISION_GENERATED:                          { icon: <CheckCircle2 className="w-3.5 h-3.5" />,  color: 'var(--accent-text)' },
+  LLM_REASONING_COMPLETED:                     { icon: <BrainCircuit className="w-3.5 h-3.5" />,  color: '#7c3aed' },
+  POLICY_EVALUATED:                            { icon: <Scale className="w-3.5 h-3.5" />,         color: 'var(--accent)' },
+  DECISION_GENERATED:                          { icon: <CheckCircle2 className="w-3.5 h-3.5" />,  color: 'var(--accent)' },
   INVESTIGATION_COMPLETED:                     { icon: <CheckCircle2 className="w-3.5 h-3.5" />,  color: 'var(--success)' },
   INVESTIGATION_FAILED:                        { icon: <AlertCircle className="w-3.5 h-3.5" />,   color: 'var(--danger)' },
-  CASE_OPENED:                                 { icon: <PlayCircle className="w-3.5 h-3.5" />,    color: '#38bdf8' },
+  CASE_OPENED:                                 { icon: <PlayCircle className="w-3.5 h-3.5" />,    color: 'var(--accent)' },
 };
 
 const DEFAULT_EVENT = { icon: <Send className="w-3.5 h-3.5" />, color: 'var(--text-muted)' };
@@ -31,7 +31,7 @@ function ActorBadge({ actor }: { actor: string }) {
   const norm = (actor || '').toUpperCase();
   if (norm === 'AGENT')
     return (
-      <span className="pill" style={{ background: 'rgba(56,189,248,0.08)', color: '#7dd3fc', borderColor: 'rgba(56,189,248,0.2)', fontSize: 10 }}>
+      <span className="pill" style={{ background: 'var(--accent-subtle)', color: 'var(--accent-text)', borderColor: 'var(--accent-border)', fontSize: 10 }}>
         <Bot className="w-2.5 h-2.5" /> AGENT
       </span>
     );
@@ -42,7 +42,7 @@ function ActorBadge({ actor }: { actor: string }) {
       </span>
     );
   return (
-    <span className="pill" style={{ background: 'rgba(196,181,253,0.08)', color: '#c4b5fd', borderColor: 'rgba(196,181,253,0.2)', fontSize: 10 }}>
+    <span className="pill" style={{ background: 'rgba(124,58,237,0.07)', color: '#7c3aed', borderColor: 'rgba(124,58,237,0.2)', fontSize: 10 }}>
       <User className="w-2.5 h-2.5" /> ANALYST
     </span>
   );
