@@ -100,7 +100,52 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
 
       try {
         const historyData = await apiService.getCaseInvestigations(caseId);
-        setHistoryRuns(historyData.investigations || []);
+        const runs = historyData.investigations || [];
+        setHistoryRuns(runs);
+
+        // Auto-load latest historical snapshot if available
+        if (runs.length > 0) {
+          try {
+            const detail = await apiService.getInvestigation(runs[0].investigation_id);
+            setInvestigation({
+              case_id: detail.case_id,
+              customer_id: detail.customer_id,
+              case_status: detail.case_status || (detail.status as any) || 'UNDER_INVESTIGATION',
+              status: detail.status || detail.case_status || 'UNDER_INVESTIGATION',
+              verdict: detail.verdict || 'NEEDS_REVIEW',
+              fraud_probability: detail.fraud_probability ?? null,
+              pattern: detail.pattern ?? null,
+              evidence: detail.evidence || [],
+              affected_transaction_ids: [],
+              connected_card_ids: [],
+              connected_device_ids: [],
+              exposure: detail.exposure ?? data.exposure ?? 0,
+              similar_prior_cases: [],
+              written_to_graph: false,
+              evidence_requests: [],
+              next_best_actions_initial: detail.actions_initial || [],
+              next_best_actions_final: detail.actions_final || [],
+              rules_evaluated: detail.rules || [],
+              SAR: {
+                status: detail.sar_status || undefined,
+                reason: detail.sar_reason || undefined,
+              },
+              stop_reason: detail.stop_reason,
+              tokens: detail.total_tokens ? {
+                prompt: detail.prompt_tokens || 0,
+                completion: detail.completion_tokens || 0,
+                total: detail.total_tokens || 0,
+              } : undefined,
+              latency: detail.llm_latency || undefined,
+              evidence_count: detail.evidence?.length,
+              reasoning_summary: detail.reasoning_summary,
+              created_at: detail.created_at,
+              updated_at: detail.completed_at || detail.created_at,
+            });
+          } catch (e) {
+            console.error('Failed to auto-load latest historical snapshot:', e);
+          }
+        }
       } catch {
         setHistoryRuns([]);
       }
@@ -476,7 +521,7 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
       {/* ==================================================
           Pre-investigation prompt — only when no run has happened yet
           ================================================== */}
-      {!investigation && (
+      {!investigation && historyRuns.length === 0 && (
         <div className="p-6 rounded-xl border border-dashed border-slate-700 bg-slate-900/50 text-center space-y-2">
           <p className="text-sm font-semibold text-slate-300">No investigation has been run for this case yet.</p>
           <p className="text-xs text-slate-500">Click <strong className="text-indigo-400">Investigate Case</strong> to fetch graph evidence, run Groq reasoning, and evaluate R1–R10 policy rules.</p>
