@@ -7,6 +7,64 @@ from app.agent.schemas import (
     InvestigationResult
 )
 
+# ---------------------------------------------------------------------------
+# Evidence Request lifecycle schemas
+# ---------------------------------------------------------------------------
+
+class EvidenceRequestCreate(BaseModel):
+    """Payload for creating a new evidence request."""
+    transaction_id: Optional[str] = None
+    request_type: str = "customer_verification"
+    request_text: str = Field(..., min_length=5, description="The question / verification text sent to the customer.")
+    notes: Optional[str] = None
+    actor: Optional[str] = "ANALYST"
+
+
+class EvidenceRequestRespond(BaseModel):
+    """Payload for recording an actual customer / analyst response to a PENDING request."""
+    response: str = Field(..., min_length=1, description="The actual response text received from the customer or analyst.")
+    response_source: str = Field(default="CUSTOMER", description="Who provided the response: CUSTOMER, ANALYST, or SYSTEM.")
+    response_assumptions: Optional[str] = None
+    actor: Optional[str] = "ANALYST"
+
+
+class EvidenceRequestCancel(BaseModel):
+    """Payload for cancelling a PENDING evidence request."""
+    cancelled_reason: Optional[str] = None
+    actor: Optional[str] = "ANALYST"
+
+
+class EvidenceRequestResponse(BaseModel):
+    """API response schema for a persisted evidence request."""
+    request_id: str
+    case_id: str
+    transaction_id: Optional[str] = None
+    request_type: str
+    request_text: str
+    status: str  # PENDING, RESPONDED, CANCELLED
+    response: Optional[str] = None
+    response_source: Optional[str] = None
+    response_assumptions: Optional[str] = None
+    responded_at: Optional[datetime] = None
+    cancelled_reason: Optional[str] = None
+    cancelled_at: Optional[datetime] = None
+    triggered_investigation_id: Optional[str] = None
+    actor: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    notes: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class EvidenceRequestRespondResult(BaseModel):
+    """Extended response returned when a respond action also triggers a new investigation."""
+    evidence_request: EvidenceRequestResponse
+    new_investigation_id: Optional[str] = None
+    investigation_triggered: bool = False
+    investigation_error: Optional[str] = None
+
 class HealthCheck(BaseModel):
     status: str = "ok"
 

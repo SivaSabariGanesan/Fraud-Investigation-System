@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Case,
   InvestigationResult,
   EvidenceItem,
   EvidenceRequest,
+  EvidenceRequestCreatePayload,
   InvestigationHistoryItem,
   AuditEventItem,
 } from '../types/investigation';
@@ -35,6 +36,12 @@ import {
   Sparkles,
   History,
   Eye,
+  Plus,
+  MessageSquare,
+  XCircle,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
 } from 'lucide-react';
 
 interface CaseDetailsProps {
@@ -52,6 +59,37 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
   const [loading, setLoading] = useState<boolean>(true);
   const [investigating, setInvestigating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Evidence Request state
+  const [liveRequests, setLiveRequests] = useState<EvidenceRequest[]>([]);
+  const [erLoading, setErLoading] = useState(false);
+  const [erError, setErError] = useState<string | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createPayload, setCreatePayload] = useState<EvidenceRequestCreatePayload>({
+    request_type: 'customer_verification',
+    request_text: '',
+  });
+  const [createSubmitting, setCreateSubmitting] = useState(false);
+  // Per-request respond/cancel state keyed by request_id
+  const [expandedRequestId, setExpandedRequestId] = useState<string | null>(null);
+  const [respondText, setRespondText] = useState<Record<string, string>>({});
+  const [respondSource, setRespondSource] = useState<Record<string, string>>({});
+  const [respondSubmitting, setRespondSubmitting] = useState<Record<string, boolean>>({});
+  const [cancelSubmitting, setCancelSubmitting] = useState<Record<string, boolean>>({});
+  const [requestActionResult, setRequestActionResult] = useState<Record<string, string>>({});
+
+  const fetchEvidenceRequests = useCallback(async () => {
+    setErLoading(true);
+    setErError(null);
+    try {
+      const reqs = await apiService.getEvidenceRequests(caseId);
+      setLiveRequests(reqs);
+    } catch {
+      setErError('Could not load evidence requests from backend.');
+    } finally {
+      setErLoading(false);
+    }
+  }, [caseId]);
 
   const fetchDetails = async () => {
     setLoading(true);
@@ -83,6 +121,7 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
 
   useEffect(() => {
     fetchDetails();
+    fetchEvidenceRequests();
   }, [caseId]);
 
   const handleRunInvestigation = async () => {
@@ -194,6 +233,86 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
 
   // Evidence Requests
   const evidenceRequests: EvidenceRequest[] = investigation?.evidence_requests || [];
+
+  // Evidence Request: Create
+  const handleCreateRequest = async () => {
+    if (!createPayload.request_text.trim() || createPayload.request_text.trim().length < 5) {
+      setErError('Request text must be at least 5 characters.');
+      return;
+    }
+    setCreateSubmitting(true);
+    setErError(null);
+    try {
+      await apiService.createEvidenceRequest(caseId, {
+        ...createPayload,
+        request_text: createPayload.request_text.trim(),
+      });
+      setShowCreateForm(false);
+      setCreatePayload({ request_type: 'customer_verification', request_text: '' });
+      await fetchEvidenceRequests();
+      try { const auditData = await apiService.getCaseAuditTimeline(caseId); setAuditEvents(auditData || []); } catch {}
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to create evidence request.';
+      setErError(msg);
+    } finally {
+      setCreateSubmitting(false);
+    }
+  };
+
+  // Evidence Request: Respond
+  const handleRespond = async (requestId: string) => {
+    const text = (respondText[requestId] || '').trim();
+    if (!text) {
+      setRequestActionResult(prev => ({ ...prev, [requestId]: 'Response text must not be empty.' }));
+      return;
+    }
+    setRespondSubmitting(prev => ({ ...prev, [requestId]: true }));
+    setRequestActionResult(prev => ({ ...prev, [requestId]: '' }));
+    try {
+      const result = await apiService.respondToEvidenceRequest(requestId, {
+        response: text,
+        response_source: respondSource[requestId] || 'CUSTOMER',
+      });
+      let msg = `Response recorded. Status → RESPONDED.`;
+      if (result.investigation_triggered && result.new_investigation_id) {
+        msg += ` New investigation triggered: ${result.new_investigation_id}.`;
+      } else if (result.investigation_error) {
+        msg += ` Warning: new investigation failed — ${result.investigation_error}`;
+      }
+      setRequestActionResult(prev => ({ ...prev, [requestId]: msg }));
+      setRespondText(prev => ({ ...prev, [requestId]: '' }));
+      setExpandedRequestId(null);
+      await fetchEvidenceRequests();
+      // Refresh history, audit, and case data after new investigation
+      try { const histData = await apiService.getCaseInvestigations(caseId); setHistoryRuns(histData.investigations || []); } catch {}
+      try { const auditData = await apiService.getCaseAuditTimeline(caseId); setAuditEvents(auditData || []); } catch {}
+      try { const caseRefresh = await apiService.getCase(caseId); setCaseData(caseRefresh); } catch {}
+      if (onCaseUpdated) onCaseUpdated();
+    } catch (err: unknown) {
+      const errMsg = (err as any)?.response?.data?.detail || (err instanceof Error ? err.message : 'Failed to record response.');
+      setRequestActionResult(prev => ({ ...prev, [requestId]: `Error: ${errMsg}` }));
+    } finally {
+      setRespondSubmitting(prev => ({ ...prev, [requestId]: false }));
+    }
+  };
+
+  // Evidence Request: Cancel
+  const handleCancel = async (requestId: string) => {
+    if (!window.confirm(`Cancel evidence request ${requestId}? This cannot be undone.`)) return;
+    setCancelSubmitting(prev => ({ ...prev, [requestId]: true }));
+    setRequestActionResult(prev => ({ ...prev, [requestId]: '' }));
+    try {
+      await apiService.cancelEvidenceRequest(requestId, { cancelled_reason: 'Cancelled by analyst.' });
+      setRequestActionResult(prev => ({ ...prev, [requestId]: 'Request cancelled.' }));
+      await fetchEvidenceRequests();
+      try { const auditData = await apiService.getCaseAuditTimeline(caseId); setAuditEvents(auditData || []); } catch {}
+    } catch (err: unknown) {
+      const errMsg = (err as any)?.response?.data?.detail || (err instanceof Error ? err.message : 'Failed to cancel request.');
+      setRequestActionResult(prev => ({ ...prev, [requestId]: `Error: ${errMsg}` }));
+    } finally {
+      setCancelSubmitting(prev => ({ ...prev, [requestId]: false }));
+    }
+  };
 
   if (loading) {
     return (
@@ -864,73 +983,315 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
       </div>
 
       {/* ==================================================
-          12. EVIDENCE REQUESTS
+          12. EVIDENCE REQUESTS — Full Lifecycle Management
           ================================================== */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+      <div className="rounded-xl border border-amber-500/30 bg-amber-950/10 p-5 space-y-4">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-amber-500/20 pb-3 gap-3">
           <div className="flex items-center gap-2">
             <Send className="w-4 h-4 text-amber-400" />
-            <h3 className="font-bold text-slate-200 text-sm uppercase tracking-wider">Evidence Requests</h3>
+            <h3 className="font-bold text-amber-200 text-sm uppercase tracking-wider">Evidence Requests</h3>
+            <span className="text-xs px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">
+              {liveRequests.length} request{liveRequests.length !== 1 ? 's' : ''}
+            </span>
           </div>
-          <span className="text-xs text-slate-400 font-mono">Dispute Verification Records</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={fetchEvidenceRequests}
+              disabled={erLoading}
+              className="p-1.5 rounded bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
+              title="Refresh requests"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${erLoading ? 'animate-spin' : ''}`} />
+            </button>
+            <button
+              onClick={() => { setShowCreateForm(v => !v); setErError(null); }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/20 text-xs font-semibold transition"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              New Request
+            </button>
+          </div>
         </div>
 
-        {evidenceRequests.length === 0 ? (
-          <div className="p-4 rounded-lg bg-slate-950 text-slate-500 text-xs font-mono">
-            No active evidence requests recorded for this case.
+        {/* Global error banner */}
+        {erError && (
+          <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{erError}</span>
+            <button onClick={() => setErError(null)} className="ml-auto text-slate-400 hover:text-slate-200">✕</button>
+          </div>
+        )}
+
+        {/* ---- CREATE FORM ---- */}
+        {showCreateForm && (
+          <div className="p-4 rounded-xl bg-slate-950 border border-amber-500/30 space-y-3 text-xs">
+            <p className="font-semibold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+              <Plus className="w-3.5 h-3.5" /> New Evidence Request
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="text-slate-400 uppercase font-mono block mb-1">Request Type</label>
+                <select
+                  value={createPayload.request_type}
+                  onChange={e => setCreatePayload(prev => ({ ...prev, request_type: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 font-mono text-xs focus:outline-none focus:border-amber-500/50"
+                >
+                  <option value="customer_verification">Customer Verification</option>
+                  <option value="transaction_confirmation">Transaction Confirmation</option>
+                  <option value="identity_verification">Identity Verification</option>
+                  <option value="document_request">Document Request</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-slate-400 uppercase font-mono block mb-1">Transaction ID (optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 3530164"
+                  value={createPayload.transaction_id || ''}
+                  onChange={e => setCreatePayload(prev => ({ ...prev, transaction_id: e.target.value || undefined }))}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 font-mono text-xs placeholder-slate-600 focus:outline-none focus:border-amber-500/50"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-slate-400 uppercase font-mono block mb-1">
+                Request Text <span className="text-rose-400">*</span>
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Describe the verification question or request to send to the customer…"
+                value={createPayload.request_text}
+                onChange={e => setCreatePayload(prev => ({ ...prev, request_text: e.target.value }))}
+                className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 font-sans text-xs placeholder-slate-600 resize-none focus:outline-none focus:border-amber-500/50"
+              />
+            </div>
+
+            <div className="flex items-center gap-3 pt-1">
+              <button
+                onClick={handleCreateRequest}
+                disabled={createSubmitting || createPayload.request_text.trim().length < 5}
+                className="px-4 py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-semibold text-xs transition disabled:opacity-40 flex items-center gap-1.5"
+              >
+                {createSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                Submit Request
+              </button>
+              <button
+                onClick={() => { setShowCreateForm(false); setErError(null); }}
+                className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 font-semibold text-xs transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ---- REQUEST LIST ---- */}
+        {erLoading ? (
+          <div className="p-4 rounded-lg bg-slate-950 text-slate-400 text-xs font-mono flex items-center gap-2">
+            <RefreshCw className="w-4 h-4 animate-spin" /> Loading evidence requests…
+          </div>
+        ) : liveRequests.length === 0 ? (
+          <div className="p-4 rounded-lg bg-slate-950 text-slate-500 text-xs font-mono text-center space-y-1">
+            <p>No evidence requests found for this case.</p>
+            <p className="text-slate-600">Click "New Request" to create one, or run an investigation to sync requests from TigerGraph.</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {evidenceRequests.map((er, idx) => {
-              const isPending = (er.status || '').toLowerCase() === 'pending';
-              const reqText = er.request_text || er.details?.request_text || 'Standard Verification Request';
-              const responseText = er.response || er.details?.response || null;
+            {liveRequests.map(er => {
+              const isPending = er.status === 'PENDING';
+              const isResponded = er.status === 'RESPONDED';
+              const isCancelled = er.status === 'CANCELLED';
+              const isExpanded = expandedRequestId === er.request_id;
+              const actionResult = requestActionResult[er.request_id];
+              const isRespondSubmitting = respondSubmitting[er.request_id] || false;
+              const isCancelSubmitting = cancelSubmitting[er.request_id] || false;
 
               return (
-                <div key={idx} className="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-3 text-xs">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-900 pb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-indigo-300 text-sm">{er.request_id}</span>
-                      <span className="px-2 py-0.5 rounded bg-slate-900 text-slate-300 font-mono">
-                        {er.request_type || 'CUSTOMER_VERIFICATION'}
-                      </span>
+                <div
+                  key={er.request_id}
+                  className={`rounded-xl border text-xs transition ${
+                    isPending
+                      ? 'border-amber-500/30 bg-slate-950'
+                      : isResponded
+                      ? 'border-emerald-500/30 bg-emerald-950/10'
+                      : 'border-slate-700 bg-slate-950 opacity-75'
+                  }`}
+                >
+                  {/* Card header */}
+                  <div className="p-4 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                    <div className="space-y-1.5 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono font-bold text-indigo-300">{er.request_id}</span>
+                        <span className="px-2 py-0.5 rounded bg-slate-900 text-slate-400 font-mono border border-slate-800">
+                          {er.request_type || 'customer_verification'}
+                        </span>
+
+                        {/* Status badge */}
+                        {isPending && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            <AlertTriangle className="w-3 h-3" /> PENDING
+                          </span>
+                        )}
+                        {isResponded && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <CheckCircle2 className="w-3 h-3" /> RESPONDED
+                          </span>
+                        )}
+                        {isCancelled && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold bg-slate-700/50 text-slate-400 border border-slate-700">
+                            <XCircle className="w-3 h-3" /> CANCELLED
+                          </span>
+                        )}
+
+                        {/* New investigation link */}
+                        {er.triggered_investigation_id && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-mono">
+                            <ExternalLink className="w-3 h-3" />
+                            Investigation: {er.triggered_investigation_id}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Request text */}
+                      <p className="text-slate-300 font-sans leading-relaxed">{er.request_text || 'No request text.'}</p>
+
+                      {/* Timestamps */}
+                      <div className="flex flex-wrap gap-4 text-[11px] text-slate-500 font-mono">
+                        <span>Created: {er.created_at ? formatDate(er.created_at) : 'N/A'}</span>
+                        {er.responded_at && <span>Responded: {formatDate(er.responded_at)}</span>}
+                        {er.cancelled_at && <span>Cancelled: {formatDate(er.cancelled_at)}</span>}
+                      </div>
                     </div>
 
-                    <div>
-                      {isPending ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                          <AlertTriangle className="w-3.5 h-3.5" /> Verification Pending
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> {er.status}
-                        </span>
-                      )}
-                    </div>
+                    {/* Action buttons — only for PENDING */}
+                    {isPending && (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={() => setExpandedRequestId(isExpanded ? null : er.request_id)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 font-semibold transition"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          Record Response
+                          {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                        </button>
+                        <button
+                          onClick={() => handleCancel(er.request_id)}
+                          disabled={isCancelSubmitting}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 font-semibold transition disabled:opacity-40"
+                          title="Cancel this request"
+                        >
+                          {isCancelSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+                          Cancel
+                        </button>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <span className="text-slate-400 uppercase font-mono block">Request Text</span>
-                      <p className="text-slate-200 mt-1 font-sans">{reqText}</p>
-                    </div>
-
-                    <div>
-                      <span className="text-slate-400 uppercase font-mono block">Customer Response</span>
-                      <p className="mt-1 font-sans font-semibold">
-                        {responseText ? (
-                          <span className="text-emerald-400">{responseText}</span>
-                        ) : (
-                          <span className="text-slate-500 italic">No response received</span>
+                  {/* Response detail — for RESPONDED requests */}
+                  {isResponded && er.response && (
+                    <div className="px-4 pb-4 pt-0 space-y-2 border-t border-emerald-500/20">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3">
+                        <div>
+                          <span className="text-slate-400 uppercase font-mono block mb-1">Customer Response</span>
+                          <p className="text-emerald-300 font-sans font-semibold">{er.response}</p>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 uppercase font-mono block mb-1">Response Source</span>
+                          <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono font-bold">
+                            {er.response_source || 'CUSTOMER'}
+                          </span>
+                        </div>
+                        {er.response_assumptions && (
+                          <div className="col-span-2">
+                            <span className="text-slate-400 uppercase font-mono block mb-1">Analyst Assumptions</span>
+                            <p className="text-slate-300 font-sans italic">{er.response_assumptions}</p>
+                          </div>
                         )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Cancellation detail */}
+                  {isCancelled && er.cancelled_reason && (
+                    <div className="px-4 pb-4 pt-0 border-t border-slate-700">
+                      <p className="text-slate-500 font-sans pt-3 italic">
+                        Cancellation reason: {er.cancelled_reason}
                       </p>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="flex items-center gap-4 text-[11px] text-slate-500 font-mono pt-1">
-                    <span>Requested At: {er.requested_at || er.created_at ? formatDate(er.requested_at || er.created_at) : 'N/A'}</span>
-                    <span>Responded At: {er.responded_at ? formatDate(er.responded_at) : 'N/A'}</span>
-                  </div>
+                  {/* Inline respond form — expanded for PENDING */}
+                  {isPending && isExpanded && (
+                    <div className="px-4 pb-4 pt-2 border-t border-emerald-500/20 space-y-3">
+                      <p className="font-semibold text-emerald-300 uppercase tracking-wider flex items-center gap-1.5 pt-2">
+                        <MessageSquare className="w-3.5 h-3.5" /> Record Customer Response
+                      </p>
+                      <p className="text-slate-500 italic font-sans leading-relaxed">
+                        Enter the actual response received from the customer or analyst.
+                        Do not fabricate a response. This will trigger a new investigation run.
+                      </p>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="md:col-span-2">
+                          <label className="text-slate-400 uppercase font-mono block mb-1">
+                            Response Text <span className="text-rose-400">*</span>
+                          </label>
+                          <textarea
+                            rows={3}
+                            placeholder="Enter the exact customer response received…"
+                            value={respondText[er.request_id] || ''}
+                            onChange={e => setRespondText(prev => ({ ...prev, [er.request_id]: e.target.value }))}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 font-sans text-xs placeholder-slate-600 resize-none focus:outline-none focus:border-emerald-500/50"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-slate-400 uppercase font-mono block mb-1">Response Source</label>
+                          <select
+                            value={respondSource[er.request_id] || 'CUSTOMER'}
+                            onChange={e => setRespondSource(prev => ({ ...prev, [er.request_id]: e.target.value }))}
+                            className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 font-mono text-xs focus:outline-none focus:border-emerald-500/50"
+                          >
+                            <option value="CUSTOMER">CUSTOMER</option>
+                            <option value="ANALYST">ANALYST</option>
+                            <option value="SYSTEM">SYSTEM</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 pt-1">
+                        <button
+                          onClick={() => handleRespond(er.request_id)}
+                          disabled={isRespondSubmitting || !(respondText[er.request_id] || '').trim()}
+                          className="px-4 py-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 font-semibold text-xs transition disabled:opacity-40 flex items-center gap-1.5"
+                        >
+                          {isRespondSubmitting
+                            ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Submitting…</>
+                            : <><CheckCircle2 className="w-3.5 h-3.5" /> Submit Response & Trigger Investigation</>}
+                        </button>
+                        <button
+                          onClick={() => setExpandedRequestId(null)}
+                          className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 font-semibold text-xs transition"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Per-request action result message */}
+                  {actionResult && (
+                    <div className={`mx-4 mb-4 p-3 rounded-lg text-xs font-mono ${
+                      actionResult.startsWith('Error')
+                        ? 'bg-rose-500/10 border border-rose-500/20 text-rose-300'
+                        : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300'
+                    }`}>
+                      {actionResult}
+                    </div>
+                  )}
                 </div>
               );
             })}

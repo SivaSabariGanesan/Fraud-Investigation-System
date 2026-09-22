@@ -119,3 +119,39 @@ class AuditEventModel(Base):
     metadata_json = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+
+class EvidenceRequestModel(Base):
+    """
+    SQLAlchemy Model representing an analyst-managed Evidence Request lifecycle record.
+
+    Lifecycle: PENDING -> RESPONDED or CANCELLED.
+    Only PENDING requests can receive a response or be cancelled.
+
+    Note: ER-HHG-003-001 originates from TigerGraph FraudGraph and is seeded into this
+    table on first investigation. Its status remains PENDING until an actual analyst
+    response is explicitly recorded via POST /api/evidence-requests/{request_id}/respond.
+    """
+    __tablename__ = "evidence_requests"
+
+    request_id = Column(String, primary_key=True, index=True)
+    case_id = Column(String, index=True, nullable=False)
+    transaction_id = Column(String, nullable=True)
+    request_type = Column(String, nullable=False, default="customer_verification")
+    request_text = Column(Text, nullable=False)
+    status = Column(String, nullable=False, default="PENDING")  # PENDING, RESPONDED, CANCELLED
+    # Response fields — populated only when status == RESPONDED
+    response = Column(Text, nullable=True)
+    response_source = Column(String, nullable=True)   # e.g., CUSTOMER, ANALYST, SYSTEM
+    response_assumptions = Column(Text, nullable=True)
+    responded_at = Column(DateTime, nullable=True)
+    # Cancellation fields — populated only when status == CANCELLED
+    cancelled_reason = Column(Text, nullable=True)
+    cancelled_at = Column(DateTime, nullable=True)
+    # New investigation created after a response
+    triggered_investigation_id = Column(String, nullable=True)
+    # Provenance
+    actor = Column(String, nullable=True, default="ANALYST")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    notes = Column(Text, nullable=True)
+

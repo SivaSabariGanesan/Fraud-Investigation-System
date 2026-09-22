@@ -6,6 +6,11 @@ import {
   InvestigationHistoryResponse,
   InvestigationDetailResponse,
   AuditEventItem,
+  EvidenceRequest,
+  EvidenceRequestCreatePayload,
+  EvidenceRequestRespondPayload,
+  EvidenceRequestCancelPayload,
+  EvidenceRequestRespondResult,
 } from '../types/investigation';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -61,6 +66,54 @@ export const apiService = {
 
   async getCaseAuditTimeline(caseId: string): Promise<AuditEventItem[]> {
     const response = await apiClient.get<AuditEventItem[]>(`/api/cases/${caseId}/audit`);
+    return response.data;
+  },
+
+  // ---- Evidence Request lifecycle methods ----
+
+  /** List all evidence requests for a case (newest first). */
+  async getEvidenceRequests(caseId: string): Promise<EvidenceRequest[]> {
+    const response = await apiClient.get<EvidenceRequest[]>(`/api/evidence-requests/${caseId}`);
+    return response.data;
+  },
+
+  /** Get a single evidence request by case + request ID. */
+  async getEvidenceRequest(caseId: string, requestId: string): Promise<EvidenceRequest> {
+    const response = await apiClient.get<EvidenceRequest>(`/api/evidence-requests/${caseId}/${requestId}`);
+    return response.data;
+  },
+
+  /** Create a new PENDING evidence request for a case. */
+  async createEvidenceRequest(caseId: string, payload: EvidenceRequestCreatePayload): Promise<EvidenceRequest> {
+    const response = await apiClient.post<EvidenceRequest>(`/api/evidence-requests/${caseId}`, payload);
+    return response.data;
+  },
+
+  /**
+   * Record a real analyst/customer response to a PENDING evidence request.
+   * This triggers a NEW investigation automatically.
+   * CRITICAL: The response must be genuinely provided — never auto-generated.
+   */
+  async respondToEvidenceRequest(
+    requestId: string,
+    payload: EvidenceRequestRespondPayload,
+  ): Promise<EvidenceRequestRespondResult> {
+    const response = await apiClient.post<EvidenceRequestRespondResult>(
+      `/api/evidence-requests/${requestId}/respond`,
+      payload,
+    );
+    return response.data;
+  },
+
+  /** Cancel a PENDING evidence request. Does not trigger a new investigation. */
+  async cancelEvidenceRequest(
+    requestId: string,
+    payload: EvidenceRequestCancelPayload,
+  ): Promise<EvidenceRequest> {
+    const response = await apiClient.post<EvidenceRequest>(
+      `/api/evidence-requests/${requestId}/cancel`,
+      payload,
+    );
     return response.data;
   },
 };

@@ -8,6 +8,7 @@ from app.models.investigation import CaseModel, InvestigationModel
 from app.schemas.investigation import InvestigationResult, InvestigationRequest, InvestigationDetailResponse
 from app.agent.investigator import investigator_agent
 from app.services.history_service import create_audit_event, persist_investigation_run, get_investigation_detail
+from app.services.evidence_request_service import sync_tigergraph_requests
 
 router = APIRouter(prefix="/api/investigations", tags=["Investigations"])
 
@@ -21,6 +22,10 @@ async def run_investigation(
     Trigger the Fraud Investigation Agent workflow for a specific case ID.
     Queries TigerGraph for graph evidence, evaluates risk rules, logs audit trail events,
     and immutably persists historical investigation findings in SQLite.
+
+    Also syncs any TigerGraph EvidenceRequest vertices into the evidence_requests SQLite
+    table so they participate in the lifecycle workflow (create/respond/cancel).
+    This sync is idempotent — existing rows are never overwritten.
     """
     investigation_id = f"INV-{uuid4().hex[:8].upper()}"
     
@@ -56,6 +61,24 @@ async def run_investigation(
         agent_output = await investigator_agent.investigate(case_id, body.notes)
         agent_output.investigation_id = investigation_id
 
+        # 4. Sync TigerGraph EvidenceRequest vertices into SQLite evidence_requests table.
+        #    This is idempotent — existing rows (including ER-HHG-003-001) are never modified.
+        tg_evidence_requests = [
+            er.details if hasattr(er, "details") else er.__dict__
+            if hasattr(er, "__dict__") else {}
+            for er in agent_output.evidence_requests
+        ]
+        # Use raw dicts from agent output for sync
+        raw_er_list = []
+        for er in agent_output.evidence_requests:
+            if hasattr(er, "model_dump"):
+                d = er.model_dump()
+                # Flatten details into the top-level dict for sync
+                if d.get("details"):
+                    d.update(d["details"])
+                raw_er_list.append(d)
+        sync_tigergraph_requests(db, case_id, raw_er_list)
+
         # Audit: EVIDENCE_COLLECTED
         create_audit_event(
             db, case_id=case_id, investigation_id=investigation_id,
@@ -82,18 +105,18 @@ async def run_investigation(
             event_type="DECISION_GENERATED", description=f"Generated decision state '{agent_output.status}' with verdict '{agent_output.verdict}'.", actor="AGENT"
         )
 
-        # 4. Immutably persist investigation run & evidence snapshot into SQLite
+        # 5. Immutably persist investigation run & evidence snapshot into SQLite
         persist_investigation_run(
             db, investigation_id=investigation_id, result=agent_output, decision_rules=agent_output.rules_evaluated
         )
 
-        # 5. Audit: INVESTIGATION_COMPLETED
+        # 6. Audit: INVESTIGATION_COMPLETED
         create_audit_event(
             db, case_id=case_id, investigation_id=investigation_id,
             event_type="INVESTIGATION_COMPLETED", description=f"Investigation '{investigation_id}' completed successfully.", actor="AGENT"
         )
 
-        # 6. Update CaseModel summary
+        # 7. Update CaseModel summary
         case.customer_id = agent_output.customer_id
         case.status = agent_output.case_status
         case.verdict = agent_output.verdict

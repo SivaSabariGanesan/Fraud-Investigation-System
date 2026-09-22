@@ -45,14 +45,53 @@ export interface EvidenceItem {
 export interface EvidenceRequest {
   request_id: string;
   case_id?: string;
+  transaction_id?: string | null;
   request_type?: string;
-  status: string;
-  details?: Record<string, any>;
-  created_at?: string;
-  response?: string | null;
   request_text?: string | null;
-  requested_at?: string | null;
+  status: string; // PENDING | RESPONDED | CANCELLED
+  response?: string | null;
+  response_source?: string | null;
+  response_assumptions?: string | null;
   responded_at?: string | null;
+  cancelled_reason?: string | null;
+  cancelled_at?: string | null;
+  triggered_investigation_id?: string | null;
+  actor?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  notes?: string | null;
+  // Backward-compat aliases from TigerGraph EvidenceRequestResult
+  details?: Record<string, any>;
+  requested_at?: string | null;
+}
+
+// ---- Payloads for API calls ----
+
+export interface EvidenceRequestCreatePayload {
+  transaction_id?: string | null;
+  request_type?: string;
+  request_text: string;
+  notes?: string | null;
+  actor?: string;
+}
+
+export interface EvidenceRequestRespondPayload {
+  response: string;
+  response_source?: string;
+  response_assumptions?: string | null;
+  actor?: string;
+}
+
+export interface EvidenceRequestCancelPayload {
+  cancelled_reason?: string | null;
+  actor?: string;
+}
+
+export interface EvidenceRequestRespondResult {
+  evidence_request: EvidenceRequest;
+  new_investigation_id: string | null;
+  investigation_triggered: boolean;
+  investigation_error: string | null;
 }
 
 export interface KeyEvidenceFinding {
