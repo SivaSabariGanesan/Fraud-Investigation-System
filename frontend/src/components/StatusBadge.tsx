@@ -1,6 +1,6 @@
 import React from 'react';
 import { Verdict, CaseStatus } from '../types/investigation';
-import { CheckCircle2, AlertTriangle, XCircle, Clock, RefreshCw, HelpCircle, ShieldCheck } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 interface StatusBadgeProps {
   verdict?: Verdict | string | null;
@@ -13,108 +13,102 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ verdict, status, class
   const normStatus = (status || '').toUpperCase();
   const normVerdict = (verdict || '').toUpperCase();
 
-  // Explicit Verdict rendering if requested
+  // If explicit verdict is requested
   if (showVerdict && normVerdict) {
     if (normVerdict === 'APPROVED') {
       return (
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 ${className}`}>
-          <CheckCircle2 className="w-3.5 h-3.5" /> APPROVED
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 ${className}`}>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+          Approved
         </span>
       );
     }
     if (normVerdict === 'DECLINED') {
       return (
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 ${className}`}>
-          <XCircle className="w-3.5 h-3.5" /> DECLINED
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-300 border border-rose-500/20 ${className}`}>
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+          Declined
         </span>
       );
     }
     if (normVerdict === 'NEEDS_REVIEW') {
       return (
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 ${className}`}>
-          <AlertTriangle className="w-3.5 h-3.5" /> NEEDS REVIEW
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-300 border border-amber-500/20 ${className}`}>
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+          Needs Review
         </span>
       );
     }
   }
 
-  // Case Status Priority
-  if (normStatus === 'UNDER_INVESTIGATION' || normStatus === 'INVESTIGATING') {
+  // Active investigation execution
+  if (normStatus === 'INVESTIGATING') {
     return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 ${className}`}>
-        <RefreshCw className="w-3.5 h-3.5 animate-spin" /> UNDER INVESTIGATION
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 ${className}`}>
+        <RefreshCw className="w-3 h-3 animate-spin text-indigo-400" />
+        Investigating...
+      </span>
+    );
+  }
+
+  if (normStatus === 'UNDER_INVESTIGATION') {
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 ${className}`}>
+        <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+        Under Investigation
       </span>
     );
   }
 
   if (normStatus === 'VERIFICATION_PENDING') {
     return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 ${className}`}>
-        <AlertTriangle className="w-3.5 h-3.5" /> VERIFICATION PENDING
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-300 border border-amber-500/20 ${className}`}>
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+        Verification Pending
       </span>
     );
   }
 
-  if (normStatus === 'UNRESOLVED') {
+  if (normStatus === 'CONFIRMED_FRAUD' || normVerdict === 'DECLINED') {
     return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700 ${className}`}>
-        <Clock className="w-3.5 h-3.5" /> UNRESOLVED
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-300 border border-rose-500/20 ${className}`}>
+        <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+        Confirmed Fraud
       </span>
     );
   }
 
-  if (normStatus === 'CONFIRMED_FRAUD') {
+  if (normStatus === 'CLEARED' || normVerdict === 'APPROVED') {
     return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 ${className}`}>
-        <XCircle className="w-3.5 h-3.5" /> CONFIRMED FRAUD
-      </span>
-    );
-  }
-
-  if (normStatus === 'CLEARED') {
-    return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 ${className}`}>
-        <ShieldCheck className="w-3.5 h-3.5" /> CLEARED
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 ${className}`}>
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+        Cleared
       </span>
     );
   }
 
   if (normStatus === 'NEEDS_REVIEW' || normVerdict === 'NEEDS_REVIEW') {
     return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 ${className}`}>
-        <AlertTriangle className="w-3.5 h-3.5" /> NEEDS REVIEW
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-300 border border-amber-500/20 ${className}`}>
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+        Needs Review
       </span>
     );
   }
 
-  if (normVerdict === 'DECLINED') {
+  if (normStatus === 'UNRESOLVED' || normStatus === 'PENDING') {
     return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 ${className}`}>
-        <XCircle className="w-3.5 h-3.5" /> DECLINED
-      </span>
-    );
-  }
-
-  if (normVerdict === 'APPROVED') {
-    return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 ${className}`}>
-        <CheckCircle2 className="w-3.5 h-3.5" /> APPROVED
-      </span>
-    );
-  }
-
-  if (normStatus === 'COMPLETED' || normStatus === 'CLOSED') {
-    return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700 ${className}`}>
-        <CheckCircle2 className="w-3.5 h-3.5" /> {normStatus}
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700/60 ${className}`}>
+        <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+        Pending Review
       </span>
     );
   }
 
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700 ${className}`}>
-      <HelpCircle className="w-3.5 h-3.5" /> {normStatus || 'PENDING'}
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800/80 text-slate-300 border border-slate-700/60 ${className}`}>
+      <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+      {normStatus || 'Pending'}
     </span>
   );
 };
-
