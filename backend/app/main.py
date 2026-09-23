@@ -6,8 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.services.database import engine, Base, SessionLocal
 from app.models.investigation import CaseModel, EvidenceRequestModel
-from app.api import health, cases, investigations
-from app.api import evidence_requests
+from app.api import health, cases, investigations, evidence_requests, sar
+
 
 logging.basicConfig(level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO))
 logger = logging.getLogger("fraud_investigation")
@@ -77,6 +77,8 @@ app.include_router(health.router)
 app.include_router(cases.router)
 app.include_router(investigations.router)
 app.include_router(evidence_requests.router)
+app.include_router(sar.router)
+
 
 
 @app.on_event("startup")

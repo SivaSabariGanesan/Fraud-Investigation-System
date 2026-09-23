@@ -238,4 +238,62 @@ export interface CaseGraphResponse {
   edges: GraphEdge[];
 }
 
+export type SarStatus =
+  | 'NOT_RECOMMENDED'
+  | 'CANDIDATE'
+  | 'UNDER_REVIEW'
+  | 'APPROVED'
+  | 'NOT_FILED'
+  | 'PREPARED'
+  | 'SUBMISSION_PENDING'
+  | 'FILED';
+
+export type SarEligibility = 'ELIGIBLE' | 'NOT_ELIGIBLE' | 'INCONCLUSIVE';
+
+export interface SarRecord {
+  sar_id: string;
+  case_id: string;
+  investigation_id: string;
+  status: SarStatus;
+  eligibility: SarEligibility;
+  eligibility_reason?: string | null;
+  exposure_usd?: number | null;
+  related_transaction_ids?: string[];
+  related_card_ids?: string[];
+  related_customer_ids?: string[];
+  related_device_ids?: string[];
+  related_regions?: string[];
+  related_closed_case_ids?: string[];
+  supporting_evidence?: Record<string, any>[];
+  policy_rules?: Record<string, any>[];
+  analyst_decision?: string | null;
+  analyst_notes?: string | null;
+  reviewer_id?: string | null;
+  report_reference?: string | null;
+  report_draft_json?: Record<string, any> | null;
+  created_at: string;
+  updated_at: string;
+  reviewed_at?: string | null;
+  prepared_at?: string | null;
+  submitted_at?: string | null;
+}
+
+export interface SarReviewPayload {
+  decision: 'approve' | 'do_not_file';
+  analyst_notes?: string;
+  reviewer_id?: string;
+}
+
+export interface SarPreparePayload {
+  notes?: string;
+  actor?: string;
+}
+
+export interface SarSubmissionStatusPayload {
+  status?: 'SUBMISSION_PENDING';
+  notes?: string;
+  actor?: string;
+}
+
+
 

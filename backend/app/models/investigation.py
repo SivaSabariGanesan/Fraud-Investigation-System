@@ -155,3 +155,46 @@ class EvidenceRequestModel(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     notes = Column(Text, nullable=True)
 
+
+class SarRecordModel(Base):
+    """
+    SQLAlchemy Model representing a persistent Suspicious Activity Report (SAR) record
+    for internal candidate review, report preparation, and status tracking.
+    """
+    __tablename__ = "sar_records"
+
+    sar_id = Column(String, primary_key=True, index=True)
+    case_id = Column(String, index=True, nullable=False)
+    investigation_id = Column(String, index=True, nullable=False)
+    status = Column(String, nullable=False, default="NOT_RECOMMENDED") # NOT_RECOMMENDED, CANDIDATE, UNDER_REVIEW, APPROVED, NOT_FILED, PREPARED, SUBMISSION_PENDING, FILED
+    eligibility = Column(String, nullable=False, default="NOT_ELIGIBLE") # ELIGIBLE, NOT_ELIGIBLE, INCONCLUSIVE
+    eligibility_reason = Column(Text, nullable=True)
+    exposure_usd = Column(Float, nullable=True)
+
+    # JSON encoded lists/dicts of related entities and snapshot evidence
+    related_transaction_ids = Column(Text, nullable=True)
+    related_card_ids = Column(Text, nullable=True)
+    related_customer_ids = Column(Text, nullable=True)
+    related_device_ids = Column(Text, nullable=True)
+    related_regions = Column(Text, nullable=True)
+    related_closed_case_ids = Column(Text, nullable=True)
+    supporting_evidence = Column(Text, nullable=True)
+    policy_rules = Column(Text, nullable=True)
+
+    # Review fields
+    analyst_decision = Column(String, nullable=True)  # APPROVE, DO_NOT_FILE
+    analyst_notes = Column(Text, nullable=True)
+    reviewer_id = Column(String, nullable=True, default="ANALYST")
+
+    # Prepared report draft
+    report_reference = Column(String, nullable=True)
+    report_draft_json = Column(Text, nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    reviewed_at = Column(DateTime, nullable=True)
+    prepared_at = Column(DateTime, nullable=True)
+    submitted_at = Column(DateTime, nullable=True)
+
+

@@ -7,13 +7,14 @@ import { StatusBadge } from '../components/StatusBadge';
 import { InvestigationHistoryModal } from '../components/InvestigationHistoryModal';
 import { AuditTimeline } from '../components/AuditTimeline';
 import { FraudGraph } from '../components/FraudGraph';
+import { SarWorkflowPanel } from '../components/SarWorkflowPanel';
 import { apiService } from '../services/api';
 
 import { formatCurrency, formatDate } from '../lib/utils';
 import {
   ArrowLeft, RefreshCw, Play, Send, Plus, CreditCard, Smartphone,
   FileText, AlertCircle, Layers, Cpu, Scale, Activity, Clock,
-  ListChecks, FileWarning, ChevronDown, ChevronUp,
+  ListChecks, ChevronDown, ChevronUp,
 } from 'lucide-react';
 
 interface CaseDetailsProps {
@@ -595,41 +596,28 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
             )}
           </div>
 
-          {/* Actions + SAR */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div style={{ ...card, padding: '14px 16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border-default)', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--success-text)' }}>
-                <ListChecks className="w-4 h-4" />
-                Mitigation Actions
-              </div>
-              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {(investigation?.next_best_actions_final?.length ? investigation.next_best_actions_final : ['AWAIT_CUSTOMER_RESPONSE', 'MONITOR_TRANSACTIONS']).map((act, i) => (
-                  <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, fontFamily: 'monospace', color: 'var(--text-secondary)' }}>
-                    <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
-                    {act}
-                  </li>
-                ))}
-              </ul>
+          {/* Mitigation Actions */}
+          <div style={{ ...card, padding: '14px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border-default)', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--success-text)' }}>
+              <ListChecks className="w-4 h-4" />
+              Mitigation Actions
             </div>
-
-            <div style={{ ...card, padding: '14px 16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border-default)', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--warn-text)' }}>
-                <FileWarning className="w-4 h-4" />
-                SAR Recommendation
-              </div>
-              <div style={{ fontSize: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Status:</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {investigation?.SAR?.status || 'NOT_RECOMMENDED'}
-                  </span>
-                </div>
-                <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.55 }}>
-                  {investigation?.SAR?.reason || 'Pending customer transaction verification before SAR consideration.'}
-                </p>
-              </div>
-            </div>
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {(investigation?.next_best_actions_final?.length ? investigation.next_best_actions_final : ['AWAIT_CUSTOMER_RESPONSE', 'MONITOR_TRANSACTIONS']).map((act, i) => (
+                <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, fontFamily: 'monospace', color: 'var(--text-secondary)', background: 'var(--bg-base)', border: '1px solid var(--border-default)', padding: '4px 10px', borderRadius: 4 }}>
+                  <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
+                  {act}
+                </li>
+              ))}
+            </ul>
           </div>
+
+          {/* Interactive SAR Workflow Panel */}
+          <SarWorkflowPanel
+            caseId={caseId}
+            investigationId={selectedInvestigationId || historyRuns[0]?.investigation_id}
+            onSarUpdated={fetchDetails}
+          />
         </div>
       )}
 

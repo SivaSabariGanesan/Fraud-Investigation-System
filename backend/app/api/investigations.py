@@ -110,6 +110,14 @@ async def run_investigation(
             db, investigation_id=investigation_id, result=agent_output, decision_rules=agent_output.rules_evaluated
         )
 
+        # 5b. Sync SAR candidate evaluation & persistent SAR record
+        try:
+            from app.services.sar_service import sync_sar_candidate_from_result
+            sync_sar_candidate_from_result(db, case_id=case_id, investigation_id=investigation_id, agent_output=agent_output)
+        except Exception as _sar_err:
+            pass
+
+
         # 6. Audit: INVESTIGATION_COMPLETED
         create_audit_event(
             db, case_id=case_id, investigation_id=investigation_id,

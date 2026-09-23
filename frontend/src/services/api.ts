@@ -12,6 +12,10 @@ import {
   EvidenceRequestCancelPayload,
   EvidenceRequestRespondResult,
   CaseGraphResponse,
+  SarRecord,
+  SarReviewPayload,
+  SarPreparePayload,
+  SarSubmissionStatusPayload,
 } from '../types/investigation';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -78,7 +82,6 @@ export const apiService = {
     return response.data;
   },
 
-
   /** Get a single evidence request by case + request ID. */
   async getEvidenceRequest(caseId: string, requestId: string): Promise<EvidenceRequest> {
     const response = await apiClient.get<EvidenceRequest>(`/api/evidence-requests/${caseId}/${requestId}`);
@@ -124,7 +127,34 @@ export const apiService = {
     const response = await apiClient.get<CaseGraphResponse>(`/api/cases/${caseId}/graph`);
     return response.data;
   },
+
+  // ---- SAR Workflow API methods ----
+
+  /** Get current SAR record for a case. */
+  async getCaseSar(caseId: string): Promise<SarRecord> {
+    const response = await apiClient.get<SarRecord>(`/api/cases/${caseId}/sar`);
+    return response.data;
+  },
+
+  /** Analyst review of a CANDIDATE or UNDER_REVIEW SAR record (approve / do_not_file). */
+  async reviewCaseSar(caseId: string, payload: SarReviewPayload): Promise<SarRecord> {
+    const response = await apiClient.post<SarRecord>(`/api/cases/${caseId}/sar/review`, payload);
+    return response.data;
+  },
+
+  /** Generate structured internal SAR report draft for an APPROVED SAR record. */
+  async prepareCaseSar(caseId: string, payload?: SarPreparePayload): Promise<SarRecord> {
+    const response = await apiClient.post<SarRecord>(`/api/cases/${caseId}/sar/prepare`, payload || {});
+    return response.data;
+  },
+
+  /** Update internal submission tracking status for a PREPARED SAR record. */
+  async updateCaseSarSubmission(caseId: string, payload?: SarSubmissionStatusPayload): Promise<SarRecord> {
+    const response = await apiClient.post<SarRecord>(`/api/cases/${caseId}/sar/submission-status`, payload || {});
+    return response.data;
+  },
 };
+
 
 
 

@@ -177,3 +177,64 @@ class CaseGraphResponse(BaseModel):
     edges: List[GraphEdge]
 
 
+# ---------------------------------------------------------------------------
+# SAR Workflow Schemas
+# ---------------------------------------------------------------------------
+
+class SarReviewRequest(BaseModel):
+    """Payload for analyst review of a SAR candidate."""
+    decision: str = Field(..., description="Decision: 'approve' or 'do_not_file'")
+    analyst_notes: Optional[str] = Field(default=None, description="Analyst notes explaining approval or decision not to file.")
+    reviewer_id: Optional[str] = Field(default="ANALYST", description="ID of the reviewing analyst.")
+
+
+class SarPrepareRequest(BaseModel):
+    """Payload for internal SAR report preparation."""
+    notes: Optional[str] = None
+    actor: Optional[str] = "ANALYST"
+
+
+class SarSubmissionStatusRequest(BaseModel):
+    """Payload for updating internal SAR submission status."""
+    status: str = Field(default="SUBMISSION_PENDING", description="Internal tracking status (e.g. SUBMISSION_PENDING).")
+    notes: Optional[str] = None
+    actor: Optional[str] = "ANALYST"
+
+
+class SarRecordResponse(BaseModel):
+    """API response schema for a persisted SAR record."""
+    sar_id: str
+    case_id: str
+    investigation_id: str
+    status: str  # NOT_RECOMMENDED, CANDIDATE, UNDER_REVIEW, APPROVED, NOT_FILED, PREPARED, SUBMISSION_PENDING, FILED
+    eligibility: str  # ELIGIBLE, NOT_ELIGIBLE, INCONCLUSIVE
+    eligibility_reason: Optional[str] = None
+    exposure_usd: Optional[float] = None
+
+    related_transaction_ids: List[str] = []
+    related_card_ids: List[str] = []
+    related_customer_ids: List[str] = []
+    related_device_ids: List[str] = []
+    related_regions: List[str] = []
+    related_closed_case_ids: List[str] = []
+    supporting_evidence: List[Dict[str, Any]] = []
+    policy_rules: List[Dict[str, Any]] = []
+
+    analyst_decision: Optional[str] = None
+    analyst_notes: Optional[str] = None
+    reviewer_id: Optional[str] = None
+
+    report_reference: Optional[str] = None
+    report_draft_json: Optional[Dict[str, Any]] = None
+
+    created_at: datetime
+    updated_at: datetime
+    reviewed_at: Optional[datetime] = None
+    prepared_at: Optional[datetime] = None
+    submitted_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+
