@@ -6,7 +6,9 @@ import {
 import { StatusBadge } from '../components/StatusBadge';
 import { InvestigationHistoryModal } from '../components/InvestigationHistoryModal';
 import { AuditTimeline } from '../components/AuditTimeline';
+import { FraudGraph } from '../components/FraudGraph';
 import { apiService } from '../services/api';
+
 import { formatCurrency, formatDate } from '../lib/utils';
 import {
   ArrowLeft, RefreshCw, Play, Send, Plus, CreditCard, Smartphone,
@@ -417,9 +419,13 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack, onCase
           TAB 1 — TRANSACTIONS & EVIDENCE
           ══════════════════════════════════════════════════════ */}
       {activeTab === 'overview' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {/* Investigation Network Graph Component */}
+          <FraudGraph caseId={caseId} />
 
           {/* Transactions table */}
+
           <div style={{ ...card, overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border-default)' }}>
               <div>

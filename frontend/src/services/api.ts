@@ -11,6 +11,7 @@ import {
   EvidenceRequestRespondPayload,
   EvidenceRequestCancelPayload,
   EvidenceRequestRespondResult,
+  CaseGraphResponse,
 } from '../types/investigation';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -77,6 +78,7 @@ export const apiService = {
     return response.data;
   },
 
+
   /** Get a single evidence request by case + request ID. */
   async getEvidenceRequest(caseId: string, requestId: string): Promise<EvidenceRequest> {
     const response = await apiClient.get<EvidenceRequest>(`/api/evidence-requests/${caseId}/${requestId}`);
@@ -116,5 +118,13 @@ export const apiService = {
     );
     return response.data;
   },
+
+  /** Get case-specific real TigerGraph network visualization nodes and edges. */
+  async getCaseGraph(caseId: string): Promise<CaseGraphResponse> {
+    const response = await apiClient.get<CaseGraphResponse>(`/api/cases/${caseId}/graph`);
+    return response.data;
+  },
 };
+
+
 

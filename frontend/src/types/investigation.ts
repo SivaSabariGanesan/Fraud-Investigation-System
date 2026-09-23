@@ -217,3 +217,25 @@ export interface InvestigationDetailResponse {
   audit_events: AuditEventItem[];
 }
 
+export interface GraphNode {
+  id: string;
+  type: 'Customer' | 'Card' | 'Transaction' | 'DeviceProfile' | 'EmailDomain' | 'BillingRegion' | 'ClosedCase' | 'EvidenceRequest' | string;
+  label: string;
+  properties: Record<string, any>;
+}
+
+export interface GraphEdge {
+  id: string;
+  source: string;
+  target: string;
+  type: 'OWNS' | 'MADE' | 'FROM_DEVICE' | 'PURCHASER_EMAIL' | 'BILLED_IN' | 'INVOLVES' | 'CONNECTED_TO' | 'FOR_CASE' | 'FOR_TRANSACTION' | string;
+  label: string;
+}
+
+export interface CaseGraphResponse {
+  case_id: string;
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+}
+
+

@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@xyflow/react": "^12.11.6",
     "axios": "^1.6.7",
     "clsx": "^2.1.0",
     "lucide-react": "^0.323.0",

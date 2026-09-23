@@ -151,3 +151,29 @@ class InvestigationDetailResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
+# ---------------------------------------------------------------------------
+# Graph Visualization Schemas
+# ---------------------------------------------------------------------------
+
+class GraphNode(BaseModel):
+    id: str
+    type: str  # Customer, Card, Transaction, DeviceProfile, EmailDomain, BillingRegion, ClosedCase, EvidenceRequest
+    label: str
+    properties: Dict[str, Any] = Field(default_factory=dict)
+
+
+class GraphEdge(BaseModel):
+    id: str
+    source: str
+    target: str
+    type: str  # OWNS, MADE, FROM_DEVICE, PURCHASER_EMAIL, BILLED_IN, INVOLVES, CONNECTED_TO, FOR_CASE, FOR_TRANSACTION
+    label: str
+
+
+class CaseGraphResponse(BaseModel):
+    case_id: str
+    nodes: List[GraphNode]
+    edges: List[GraphEdge]
+
+
