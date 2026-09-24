@@ -309,20 +309,20 @@ uvicorn app.main:app --reload --port 8000
 - **Interactive Swagger Documentation**: `http://localhost:8000/docs`
 - **Health Check**: `http://localhost:8000/health`
 
-#### Environment Configuration (`backend/.env`)
+#### Environment Configuration Template (`backend/.env`)
 ```ini
 # Database
 DATABASE_URL=sqlite:///./app/database/fraud.db
 
-# Real TigerGraph Cloud Credentials
-TIGERGRAPH_HOST=https://tg-6e22da4d-d8bd-479a-9705-85af88dd8a0e.tg-2635877100.i.tgcloud.io
+# TigerGraph Cloud Credentials
+TIGERGRAPH_HOST=https://your-tigergraph-instance.cloud.tigergraph.com
 TIGERGRAPH_GRAPH_NAME=FraudGraph
-TIGERGRAPH_SECRET=j04dqpkd255ir9nqddooagl07gp3nmep
+TIGERGRAPH_SECRET=your_tigergraph_database_secret_here
 
 # AI / LLM Configuration
 LLM_PROVIDER=groq
 GROQ_MODEL=openai/gpt-oss-120b
-GROQ_API_KEY=gsk_your_groq_api_key
+GROQ_API_KEY=your_groq_api_key_here
 
 # App Environment
 APP_ENV=development
