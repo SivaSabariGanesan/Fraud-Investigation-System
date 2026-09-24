@@ -112,6 +112,7 @@ class InvestigationResult(BaseModel):
     tool_calls: List[Dict[str, Any]] = Field(default_factory=list)
     tokens: Dict[str, int] = Field(default_factory=lambda: {"prompt": 0, "completion": 0, "total": 0})
     latency: float = 0.0
+    llm_fallback: bool = False
     # API / Frontend compatibility
     evidence_count: int = 0
     reasoning_summary: Optional[str] = None

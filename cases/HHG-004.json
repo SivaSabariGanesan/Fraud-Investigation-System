@@ -1,11 +1,11 @@
 {
   "case_id": "HHG-004",
   "customer_id": "C08106",
-  "case_status": "CLEARED",
-  "status": "CLEARED",
-  "verdict": "APPROVED",
+  "case_status": "UNDER_INVESTIGATION",
+  "status": "UNDER_INVESTIGATION",
+  "verdict": "NEEDS_REVIEW",
   "fraud_probability": null,
-  "pattern": "Low Risk Standard Transaction",
+  "pattern": "Multiple transactions with 'UNKNOWN' status",
   "evidence": [
     {
       "evidence_id": "EV-CASE-HHG-004",
@@ -640,16 +640,18 @@
   "written_to_graph": false,
   "evidence_requests": [],
   "next_best_actions": [
-    "CLOSE_CASE",
-    "UNFLAG_TRANSACTION"
+    "REQUEST_ADDITIONAL_KYC",
+    "REVIEW_DISPUTE_DOCUMENTATION",
+    "MONITOR_CARD_ACTIVITY"
   ],
   "next_best_actions_initial": [
     "COLLECT_GRAPH_EVIDENCE",
     "EXTRACT_SUBGRAPH_SIGNALS"
   ],
   "next_best_actions_final": [
-    "CLOSE_CASE",
-    "UNFLAG_TRANSACTION"
+    "REQUEST_ADDITIONAL_KYC",
+    "REVIEW_DISPUTE_DOCUMENTATION",
+    "MONITOR_CARD_ACTIVITY"
   ],
   "SAR": {
     "sar_id": "SAR-AF09D132",
@@ -658,7 +660,7 @@
     "exposure_usd": 484.5300000000001,
     "reason": "No confirmed fraud policy triggers met.",
     "created_at": "2026-09-23T17:16:23.211620",
-    "updated_at": "2026-09-23T18:22:25.032180"
+    "updated_at": "2026-09-24T22:37:50.420159"
   },
   "stop_reason": "WORKFLOW_COMPLETE",
   "rules_evaluated": [
@@ -666,6 +668,7 @@
       "rule_id": "R1",
       "rule_name": "LOW_RISK_BASELINE",
       "triggered": false,
+      "status": "NOT_TRIGGERED",
       "description": "Single low-risk transaction without risk signals or pending evidence requests.",
       "severity": "INFO"
     },
@@ -673,13 +676,15 @@
       "rule_id": "R2",
       "rule_name": "PENDING_EVIDENCE_VERIFICATION",
       "triggered": false,
+      "status": "NOT_TRIGGERED",
       "description": "Pending evidence request exists. Investigation requires awaiting response and cannot be auto-cleared.",
       "severity": "MEDIUM"
     },
     {
       "rule_id": "R3",
       "rule_name": "CUSTOMER_DISPUTE_TRIGGER",
-      "triggered": false,
+      "triggered": true,
+      "status": "TRIGGERED",
       "description": "Transaction or case flagged as disputed by customer. Triggers verification workflow.",
       "severity": "HIGH"
     },
@@ -687,6 +692,7 @@
       "rule_id": "R4",
       "rule_name": "STOLEN_CARD_FLAG",
       "triggered": false,
+      "status": "NOT_TRIGGERED",
       "description": "Card associated with transaction is flagged as stolen in system records.",
       "severity": "CRITICAL"
     },
@@ -694,6 +700,7 @@
       "rule_id": "R5",
       "rule_name": "DEVICE_SPOOFING_HIGH_RISK",
       "triggered": false,
+      "status": "NOT_TRIGGERED",
       "description": "Transaction performed via VPN/Proxy device combined with elevated risk score.",
       "severity": "HIGH"
     },
@@ -701,6 +708,7 @@
       "rule_id": "R6",
       "rule_name": "REGIONAL_OR_EMAIL_MISMATCH",
       "triggered": false,
+      "status": "NOT_TRIGGERED",
       "description": "Transaction involves regional billing mismatch or disposable email domain service.",
       "severity": "MEDIUM"
     },
@@ -708,6 +716,7 @@
       "rule_id": "R7",
       "rule_name": "LINKED_HISTORICAL_FRAUD",
       "triggered": false,
+      "status": "NOT_TRIGGERED",
       "description": "Entity is linked to past closed case(s) with FRAUD_CONFIRMED verdict.",
       "severity": "HIGH"
     },
@@ -715,13 +724,15 @@
       "rule_id": "R8",
       "rule_name": "HIGH_VELOCITY_CARD_TESTING",
       "triggered": false,
+      "status": "NOT_TRIGGERED",
       "description": "Card exhibits high transaction velocity with multiple flagged attempts.",
       "severity": "CRITICAL"
     },
     {
       "rule_id": "R9",
       "rule_name": "RISK_SCORE_SIGNAL_ONLY",
-      "triggered": true,
+      "triggered": false,
+      "status": "SIGNAL_ONLY",
       "description": "Risk score is evaluated as an investigation signal, never as an automatic fraud verdict alone.",
       "severity": "INFO"
     },
@@ -729,11 +740,12 @@
       "rule_id": "R10",
       "rule_name": "PENDING_EVIDENCE_OVERRIDE",
       "triggered": false,
+      "status": "NOT_TRIGGERED",
       "description": "Pending evidence request overrides auto-clear. Final state remains UNRESOLVED / VERIFICATION_PENDING.",
       "severity": "HIGH"
     }
   ],
-  "reasoning_summary": "Investigation into HHG-004: High-value online transactions with moderate risk signals, indicating potential fraudulent activity.",
+  "reasoning_summary": "Investigation for HHG-004 triggered by customer report with dispute active. Analyzed graph evidence shows multiple transactions with varying risk signals, but no clear indications of stolen cards, VPN devices, regional mismatches, or disposable emails. The case has a 'UNKNOWN' status and 'UNSPECIFIED' verdict.",
   "tool_calls": [
     {
       "tool_name": "get_case",
@@ -753,7 +765,7 @@
         "analyst_notes": "",
         "id": "HHG-004"
       },
-      "timestamp": "2026-09-23T18:21:25.002511",
+      "timestamp": "2026-09-24T22:36:59.488826",
       "error": null
     },
     {
@@ -774,7 +786,7 @@
           "id": "3583227"
         }
       ],
-      "timestamp": "2026-09-23T18:21:32.826774",
+      "timestamp": "2026-09-24T22:37:07.935204",
       "error": null
     },
     {
@@ -788,7 +800,7 @@
         "card_id": "21429",
         "id": "21429"
       },
-      "timestamp": "2026-09-23T18:21:34.331510",
+      "timestamp": "2026-09-24T22:37:09.455209",
       "error": null
     },
     {
@@ -802,7 +814,7 @@
         "card_id": "21429",
         "id": "21429"
       },
-      "timestamp": "2026-09-23T18:21:53.156178",
+      "timestamp": "2026-09-24T22:37:19.486432",
       "error": null
     },
     {
@@ -816,7 +828,7 @@
         "customer_id": "C08106",
         "id": "C08106"
       },
-      "timestamp": "2026-09-23T18:21:53.965165",
+      "timestamp": "2026-09-24T22:37:20.255072",
       "error": null
     },
     {
@@ -832,7 +844,7 @@
           "id": "21429"
         }
       ],
-      "timestamp": "2026-09-23T18:21:55.622754",
+      "timestamp": "2026-09-24T22:37:21.761159",
       "error": null
     },
     {
@@ -934,7 +946,7 @@
           "id": "3265139"
         }
       ],
-      "timestamp": "2026-09-23T18:21:57.946173",
+      "timestamp": "2026-09-24T22:37:24.215574",
       "error": null
     },
     {
@@ -969,7 +981,7 @@
           "id": "Windows"
         }
       ],
-      "timestamp": "2026-09-23T18:22:00.818961",
+      "timestamp": "2026-09-24T22:37:25.992361",
       "error": null
     },
     {
@@ -998,7 +1010,7 @@
           "id": "284.0"
         }
       ],
-      "timestamp": "2026-09-23T18:22:02.694063",
+      "timestamp": "2026-09-24T22:37:27.772239",
       "error": null
     },
     {
@@ -1042,7 +1054,7 @@
           "id": "live.com.mx"
         }
       ],
-      "timestamp": "2026-09-23T18:22:04.512796",
+      "timestamp": "2026-09-24T22:37:29.641366",
       "error": null
     },
     {
@@ -1055,7 +1067,7 @@
         ]
       },
       "result": [],
-      "timestamp": "2026-09-23T18:22:05.303808",
+      "timestamp": "2026-09-24T22:37:30.548526",
       "error": null
     },
     {
@@ -1066,14 +1078,14 @@
         ]
       },
       "result": [],
-      "timestamp": "2026-09-23T18:22:14.237514",
+      "timestamp": "2026-09-24T22:37:39.908064",
       "error": null
     }
   ],
   "tokens": {
-    "prompt": 2134,
-    "completion": 641,
-    "total": 2775
+    "prompt": 2218,
+    "completion": 579,
+    "total": 2797
   },
-  "latency": 10.771
+  "latency": 9.522
 }

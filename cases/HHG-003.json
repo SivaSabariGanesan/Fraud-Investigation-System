@@ -945,7 +945,7 @@
     "exposure_usd": 1307.2199999999998,
     "reason": "Pending customer verification request exists. Insufficient grounded evidence to establish SAR eligibility.",
     "created_at": "2026-09-23T17:15:57.822946",
-    "updated_at": "2026-09-23T18:21:24.182240"
+    "updated_at": "2026-09-24T22:36:58.658073"
   },
   "stop_reason": "PENDING_EVIDENCE_RESPONSE",
   "rules_evaluated": [
@@ -953,6 +953,7 @@
       "rule_id": "R1",
       "rule_name": "LOW_RISK_BASELINE",
       "triggered": false,
+      "status": "NOT_TRIGGERED",
       "description": "Single low-risk transaction without risk signals or pending evidence requests.",
       "severity": "INFO"
     },
@@ -960,13 +961,15 @@
       "rule_id": "R2",
       "rule_name": "PENDING_EVIDENCE_VERIFICATION",
       "triggered": true,
+      "status": "TRIGGERED",
       "description": "Pending evidence request exists. Investigation requires awaiting response and cannot be auto-cleared.",
       "severity": "MEDIUM"
     },
     {
       "rule_id": "R3",
       "rule_name": "CUSTOMER_DISPUTE_TRIGGER",
-      "triggered": false,
+      "triggered": true,
+      "status": "TRIGGERED",
       "description": "Transaction or case flagged as disputed by customer. Triggers verification workflow.",
       "severity": "HIGH"
     },
@@ -974,6 +977,7 @@
       "rule_id": "R4",
       "rule_name": "STOLEN_CARD_FLAG",
       "triggered": false,
+      "status": "NOT_TRIGGERED",
       "description": "Card associated with transaction is flagged as stolen in system records.",
       "severity": "CRITICAL"
     },
@@ -981,6 +985,7 @@
       "rule_id": "R5",
       "rule_name": "DEVICE_SPOOFING_HIGH_RISK",
       "triggered": false,
+      "status": "NOT_TRIGGERED",
       "description": "Transaction performed via VPN/Proxy device combined with elevated risk score.",
       "severity": "HIGH"
     },
@@ -988,6 +993,7 @@
       "rule_id": "R6",
       "rule_name": "REGIONAL_OR_EMAIL_MISMATCH",
       "triggered": false,
+      "status": "NOT_TRIGGERED",
       "description": "Transaction involves regional billing mismatch or disposable email domain service.",
       "severity": "MEDIUM"
     },
@@ -995,6 +1001,7 @@
       "rule_id": "R7",
       "rule_name": "LINKED_HISTORICAL_FRAUD",
       "triggered": false,
+      "status": "NOT_TRIGGERED",
       "description": "Entity is linked to past closed case(s) with FRAUD_CONFIRMED verdict.",
       "severity": "HIGH"
     },
@@ -1002,13 +1009,15 @@
       "rule_id": "R8",
       "rule_name": "HIGH_VELOCITY_CARD_TESTING",
       "triggered": false,
+      "status": "NOT_TRIGGERED",
       "description": "Card exhibits high transaction velocity with multiple flagged attempts.",
       "severity": "CRITICAL"
     },
     {
       "rule_id": "R9",
       "rule_name": "RISK_SCORE_SIGNAL_ONLY",
-      "triggered": true,
+      "triggered": false,
+      "status": "SIGNAL_ONLY",
       "description": "Risk score is evaluated as an investigation signal, never as an automatic fraud verdict alone.",
       "severity": "INFO"
     },
@@ -1016,11 +1025,12 @@
       "rule_id": "R10",
       "rule_name": "PENDING_EVIDENCE_OVERRIDE",
       "triggered": true,
+      "status": "TRIGGERED",
       "description": "Pending evidence request overrides auto-clear. Final state remains UNRESOLVED / VERIFICATION_PENDING.",
       "severity": "HIGH"
     }
   ],
-  "reasoning_summary": "Analyze the evidence for case HHG-003. The investigation reveals a series of transactions with varying risk signals, a customer record with an unspecified risk level, and a Visa card with no stolen flag. No customer response has been received for a pending customer transaction confirmation request.",
+  "reasoning_summary": "Investigation analysis for case HHG-003: customer dispute report and transactions with varying risk signals",
   "tool_calls": [
     {
       "tool_name": "get_case",
@@ -1040,7 +1050,7 @@
         "analyst_notes": "",
         "id": "HHG-003"
       },
-      "timestamp": "2026-09-23T18:20:57.476886",
+      "timestamp": "2026-09-24T22:36:32.342108",
       "error": null
     },
     {
@@ -1061,7 +1071,7 @@
           "id": "3530164"
         }
       ],
-      "timestamp": "2026-09-23T18:20:58.252763",
+      "timestamp": "2026-09-24T22:36:33.105931",
       "error": null
     },
     {
@@ -1075,7 +1085,7 @@
         "card_id": "19739",
         "id": "19739"
       },
-      "timestamp": "2026-09-23T18:21:01.340592",
+      "timestamp": "2026-09-24T22:36:34.616267",
       "error": null
     },
     {
@@ -1089,7 +1099,7 @@
         "card_id": "19739",
         "id": "19739"
       },
-      "timestamp": "2026-09-23T18:21:04.025079",
+      "timestamp": "2026-09-24T22:36:36.959770",
       "error": null
     },
     {
@@ -1103,7 +1113,7 @@
         "customer_id": "C08623",
         "id": "C08623"
       },
-      "timestamp": "2026-09-23T18:21:04.804261",
+      "timestamp": "2026-09-24T22:36:37.688423",
       "error": null
     },
     {
@@ -1119,7 +1129,7 @@
           "id": "19739"
         }
       ],
-      "timestamp": "2026-09-23T18:21:06.357199",
+      "timestamp": "2026-09-24T22:36:39.226366",
       "error": null
     },
     {
@@ -1221,7 +1231,7 @@
           "id": "3250930"
         }
       ],
-      "timestamp": "2026-09-23T18:21:08.879864",
+      "timestamp": "2026-09-24T22:36:41.676264",
       "error": null
     },
     {
@@ -1267,7 +1277,7 @@
           "id": "MacOS"
         }
       ],
-      "timestamp": "2026-09-23T18:21:10.443865",
+      "timestamp": "2026-09-24T22:36:43.387411",
       "error": null
     },
     {
@@ -1341,7 +1351,7 @@
           "id": "194.0"
         }
       ],
-      "timestamp": "2026-09-23T18:21:12.265203",
+      "timestamp": "2026-09-24T22:36:45.325372",
       "error": null
     },
     {
@@ -1381,7 +1391,7 @@
           "id": "yahoo.com"
         }
       ],
-      "timestamp": "2026-09-23T18:21:14.121366",
+      "timestamp": "2026-09-24T22:36:47.286346",
       "error": null
     },
     {
@@ -1394,7 +1404,7 @@
         ]
       },
       "result": [],
-      "timestamp": "2026-09-23T18:21:14.886600",
+      "timestamp": "2026-09-24T22:36:48.147025",
       "error": null
     },
     {
@@ -1418,14 +1428,14 @@
           "id": "ER-HHG-003-001"
         }
       ],
-      "timestamp": "2026-09-23T18:21:15.608883",
+      "timestamp": "2026-09-24T22:36:48.923630",
       "error": null
     }
   ],
   "tokens": {
-    "prompt": 2195,
-    "completion": 497,
-    "total": 2692
+    "prompt": 2279,
+    "completion": 528,
+    "total": 2807
   },
-  "latency": 8.54
+  "latency": 8.893
 }

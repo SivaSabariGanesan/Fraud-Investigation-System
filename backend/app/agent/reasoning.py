@@ -2,13 +2,35 @@ import json
 import time
 import logging
 from typing import List, Dict, Any, Optional
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from app.core.config import settings
 from app.agent.context import InvestigationContext
 from app.agent.prompts import GROQ_INVESTIGATION_SYSTEM_PROMPT, format_groq_user_prompt
 
 logger = logging.getLogger(__name__)
+
+def _normalize_string_list(v: Any) -> List[str]:
+    if v is None:
+        return []
+    if isinstance(v, str):
+        cleaned = v.strip()
+        if not cleaned or cleaned.lower() in ("none", "null", "[]", "n/a", "no"):
+            return []
+        return [cleaned]
+    if isinstance(v, list):
+        result = []
+        for item in v:
+            if item is None:
+                continue
+            if isinstance(item, str):
+                cleaned = item.strip()
+                if cleaned and cleaned.lower() not in ("none", "null", ""):
+                    result.append(cleaned)
+            else:
+                result.append(str(item))
+        return result
+    return [str(v)]
 
 class KeyEvidenceItem(BaseModel):
     """Schema for individual evidence finding item in LLM output."""
@@ -17,7 +39,7 @@ class KeyEvidenceItem(BaseModel):
     significance: str = "NEUTRAL"  # LOW, MEDIUM, HIGH, NEUTRAL
 
 class GroqLLMReasoningSchema(BaseModel):
-    """Strict structured Pydantic schema for Groq LLM output."""
+    """Strict structured Pydantic schema for Groq / Local LLM output."""
     summary: str = ""
     key_evidence: List[KeyEvidenceItem] = Field(default_factory=list)
     observed_patterns: List[str] = Field(default_factory=list)
@@ -26,6 +48,58 @@ class GroqLLMReasoningSchema(BaseModel):
     uncertainties: List[str] = Field(default_factory=list)
     relevant_rules: List[str] = Field(default_factory=list)
     reasoning: str = ""
+
+    @field_validator("observed_patterns", "conflicting_evidence", "missing_evidence", "uncertainties", "relevant_rules", mode="before")
+    @classmethod
+    def normalize_str_lists(cls, v: Any) -> List[str]:
+        return _normalize_string_list(v)
+
+    @field_validator("key_evidence", mode="before")
+    @classmethod
+    def normalize_key_evidence(cls, v: Any) -> Any:
+        if v is None:
+            return []
+        if isinstance(v, str):
+            cleaned = v.strip()
+            if not cleaned or cleaned.lower() in ("none", "null", "[]"):
+                return []
+            return [{"evidence_id": "EV-1", "finding": cleaned, "significance": "NEUTRAL"}]
+        if isinstance(v, list):
+            result = []
+            for i, item in enumerate(v):
+                if item is None:
+                    continue
+                if isinstance(item, str):
+                    cleaned = item.strip()
+                    if cleaned and cleaned.lower() not in ("none", "null", ""):
+                        result.append({"evidence_id": f"EV-{i+1}", "finding": cleaned, "significance": "NEUTRAL"})
+                elif isinstance(item, dict):
+                    result.append(item)
+            return result
+        return []
+
+    @field_validator("summary", "reasoning", mode="before")
+    @classmethod
+    def normalize_strings(cls, v: Any) -> str:
+        if v is None:
+            return ""
+        if isinstance(v, str):
+            return v
+        return str(v)
+
+    def model_post_init(self, __context: Any) -> None:
+        if self.key_evidence is None:
+            self.key_evidence = []
+        if self.observed_patterns is None:
+            self.observed_patterns = []
+        if self.conflicting_evidence is None:
+            self.conflicting_evidence = []
+        if self.missing_evidence is None:
+            self.missing_evidence = []
+        if self.uncertainties is None:
+            self.uncertainties = []
+        if self.relevant_rules is None:
+            self.relevant_rules = []
 
 class InvestigationReasoningOutput(BaseModel):
     """
@@ -47,10 +121,11 @@ class InvestigationReasoningOutput(BaseModel):
     customer_disputes_represented: List[str] = Field(default_factory=list)
     pending_evidence_requests: List[str] = Field(default_factory=list)
     analytical_summary: str = ""
-    # Observability metrics (No sensitive key logging)
+    # Observability & degraded mode indicators
     llm_model: Optional[str] = None
     llm_latency: float = 0.0
     llm_tokens: Dict[str, int] = Field(default_factory=lambda: {"prompt": 0, "completion": 0, "total": 0})
+    llm_fallback: bool = False
 
 def _build_bounded_context_payload(context: InvestigationContext) -> Dict[str, Any]:
     """
@@ -124,7 +199,7 @@ def _build_bounded_context_payload(context: InvestigationContext) -> Dict[str, A
 
 def analyze_investigation_context(context: InvestigationContext) -> InvestigationReasoningOutput:
     """
-    Analyzes InvestigationContext using Groq LLM (openai/gpt-oss-120b).
+    Analyzes InvestigationContext using local Ollama LLM or Groq LLM.
     Produces structured reasoning for downstream deterministic policy rules (R1-R10).
     """
     case_id = context.case_id
@@ -132,11 +207,24 @@ def analyze_investigation_context(context: InvestigationContext) -> Investigatio
     derived = context.derived_observations
     evidence_items = context.normalized_evidence
 
-    # Extract base IDs
-    affected_txns = [t.get("id") for t in facts.transactions if t.get("id")]
-    connected_cards = [c.get("id") for c in facts.cards_info if c.get("id")]
-    connected_devs = [d.get("id") for d in facts.devices_info if d.get("id")]
-    exposure = derived.total_exposure_amount
+    # Extract base IDs robustly from both facts and state
+    state_txns = getattr(context.state, "transaction_ids", []) or []
+    state_cards = getattr(context.state, "card_ids", []) or []
+    state_devs = getattr(context.state, "device_ids", []) or []
+
+    affected_txns = list(dict.fromkeys(
+        [t.get("id") or t.get("TransactionID") or t.get("transaction_id") for t in facts.transactions if (t.get("id") or t.get("TransactionID") or t.get("transaction_id"))] +
+        state_txns
+    ))
+    connected_cards = list(dict.fromkeys(
+        [c.get("id") or c.get("card_id") for c in facts.cards_info if (c.get("id") or c.get("card_id"))] +
+        state_cards
+    ))
+    connected_devs = list(dict.fromkeys(
+        [d.get("id") or d.get("device_id") for d in facts.devices_info if (d.get("id") or d.get("device_id"))] +
+        state_devs
+    ))
+    exposure = derived.total_exposure_amount if derived.total_exposure_amount > 0.0 else getattr(context.state, "exposure", 0.0)
 
     # Collect customer disputes and pending evidence requests
     trig_info = facts.trigger_info
@@ -163,7 +251,7 @@ def analyze_investigation_context(context: InvestigationContext) -> Investigatio
 
     supporting_ids = [e.evidence_id for e in evidence_items]
 
-    # Prepare context payload for Groq
+    # Prepare context payload for LLM
     payload = _build_bounded_context_payload(context)
     user_prompt = format_groq_user_prompt(
         case_id=case_id,
@@ -178,16 +266,18 @@ def analyze_investigation_context(context: InvestigationContext) -> Investigatio
     llm_tokens = {"prompt": 0, "completion": 0, "total": 0}
     llm_model = settings.GROQ_MODEL
     latency = 0.0
+    llm_fallback = False
 
     api_key = settings.GROQ_API_KEY
     if settings.USE_LOCAL_LLM or settings.LLM_PROVIDER in ("ollama", "local"):
         api_key = None
-        # Try local Ollama model (e.g. llama3.2:3b running in Docker)
+        # Try local Ollama model (e.g. llama3.2:3b running locally/Docker)
+        ollama_model = getattr(settings, "OLLAMA_MODEL", "llama3.2:3b")
+        llm_model = f"ollama/{ollama_model}"
         try:
             import httpx
             start_time = time.time()
             ollama_url = getattr(settings, "OLLAMA_HOST", "http://localhost:11434/api/chat")
-            ollama_model = getattr(settings, "OLLAMA_MODEL", "llama3.2:3b")
             
             res = httpx.post(
                 ollama_url,
@@ -207,8 +297,11 @@ def analyze_investigation_context(context: InvestigationContext) -> Investigatio
                 raw_content = res.json().get("message", {}).get("content", "")
                 if raw_content:
                     parsed_json = json.loads(raw_content)
+                    if isinstance(parsed_json, dict):
+                        for k in ["key_evidence", "observed_patterns", "conflicting_evidence", "missing_evidence", "uncertainties", "relevant_rules"]:
+                            if parsed_json.get(k) is None:
+                                parsed_json[k] = []
                     llm_output = GroqLLMReasoningSchema.model_validate(parsed_json)
-                    llm_model = f"ollama/{ollama_model}"
                     eval_count = res.json().get("eval_count", 0)
                     prompt_eval_count = res.json().get("prompt_eval_count", 0)
                     llm_tokens = {
@@ -216,9 +309,23 @@ def analyze_investigation_context(context: InvestigationContext) -> Investigatio
                         "completion": eval_count,
                         "total": prompt_eval_count + eval_count
                     }
+            else:
+                logger.warning(f"Ollama local LLM reasoning returned status {res.status_code}")
+                llm_output = None
+                llm_fallback = True
+                llm_model = f"ollama/{ollama_model} (degraded/http-{res.status_code})"
         except Exception as e:
-            logger.warning(f"Ollama local LLM reasoning execution error: {str(e)}")
+            # Catch httpx.TimeoutException, ValidationError, or general Exception
+            err_str = str(e)
+            logger.warning(f"Ollama local LLM reasoning execution note ({type(e).__name__}): {err_str}")
             llm_output = None
+            llm_fallback = True
+            if "Timeout" in type(e).__name__ or "timed out" in err_str.lower():
+                llm_model = f"ollama/{ollama_model} (degraded/timeout)"
+            elif "Validation" in type(e).__name__:
+                llm_model = f"ollama/{ollama_model} (degraded/validation_error)"
+            else:
+                llm_model = f"ollama/{ollama_model} (degraded/error)"
 
     if api_key and not llm_output:
         try:
@@ -249,13 +356,20 @@ def analyze_investigation_context(context: InvestigationContext) -> Investigatio
             raw_content = completion.choices[0].message.content
             if raw_content:
                 parsed_json = json.loads(raw_content)
+                if isinstance(parsed_json, dict):
+                    for k in ["key_evidence", "observed_patterns", "conflicting_evidence", "missing_evidence", "uncertainties", "relevant_rules"]:
+                        if parsed_json.get(k) is None:
+                            parsed_json[k] = []
                 llm_output = GroqLLMReasoningSchema.model_validate(parsed_json)
+                llm_fallback = False
 
         except Exception as e:
             logger.warning(f"Groq LLM reasoning execution error: {str(e)}")
             llm_output = None
+            llm_fallback = True
+            llm_model = f"{settings.GROQ_MODEL} (degraded/error)"
 
-    # Construct final reasoning output combining LLM structured findings or clear fallback
+    # Construct final reasoning output combining LLM structured findings or clear factual fallback
     if llm_output:
         key_findings = [item.finding for item in llm_output.key_evidence]
         if not key_findings and llm_output.reasoning:
@@ -278,7 +392,8 @@ def analyze_investigation_context(context: InvestigationContext) -> Investigatio
             summary = summary.replace("undisputed transactions", "transactions pending customer verification")
 
     else:
-        # Factual fallback if Groq API is unavailable (No fake verdicts or mock data)
+        llm_fallback = True
+        # Factual fallback if LLM is unavailable or timed out / malformed (No fake verdicts or mock data)
         key_findings = [
             f"Case {case_id} contains {len(affected_txns)} transaction(s) totaling ${exposure:,.2f} USD exposure."
         ]
@@ -334,5 +449,6 @@ def analyze_investigation_context(context: InvestigationContext) -> Investigatio
         analytical_summary=summary,
         llm_model=llm_model,
         llm_latency=latency,
-        llm_tokens=llm_tokens
+        llm_tokens=llm_tokens,
+        llm_fallback=llm_fallback
     )

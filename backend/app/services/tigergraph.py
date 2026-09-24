@@ -407,4 +407,38 @@ class TigerGraphService:
             "relationships": relationships
         }
 
+    async def write_case_decision(self, case_id: str, status: str, verdict: str) -> bool:
+        """
+        Attempts to write back the investigation decision state to TigerGraph RESTPP.
+        Returns True if successful, False otherwise.
+        """
+        if not self.is_configured():
+            return False
+        url = f"{self.host}/restpp/graph/{self.graph_name}"
+        payload = {
+            "vertices": {
+                "ClosedCase": {
+                    case_id: {
+                        "status": {"value": status},
+                        "verdict": {"value": verdict}
+                    }
+                }
+            }
+        }
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                headers = await self._get_auth_headers(client)
+                response = await client.post(url, headers=headers, json=payload)
+                if response.status_code in (401, 403):
+                    self._token = None
+                    headers = await self._get_auth_headers(client)
+                    response = await client.post(url, headers=headers, json=payload)
+                if response.status_code == 200:
+                    data = response.json()
+                    if not data.get("error"):
+                        return True
+            except Exception as e:
+                logger.warning(f"TigerGraph write-back failed for case {case_id}: {e}")
+        return False
+
 tigergraph_service = TigerGraphService()

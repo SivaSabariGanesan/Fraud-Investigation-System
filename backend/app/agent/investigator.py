@@ -331,6 +331,14 @@ class FraudInvestigatorAgent:
             for r in decision_result.rules_evaluated
         ]
 
+        written_to_graph_status = False
+        if tigergraph_service.is_configured():
+            try:
+                written_to_graph_status = await tigergraph_service.write_case_decision(case_id, final_case_status, final_verdict)
+            except Exception as tg_w_err:
+                logger.warning(f"TigerGraph write-back error for case '{case_id}': {tg_w_err}")
+                written_to_graph_status = False
+
         return InvestigationResult(
             case_id=case_id,
             customer_id=state.customer_id,
@@ -340,12 +348,12 @@ class FraudInvestigatorAgent:
             fraud_probability=decision_result.fraud_probability,
             pattern=decision_result.primary_pattern,
             evidence=evidence_api_list,
-            affected_transaction_ids=full_txn_ids,
-            connected_card_ids=card_ids,
-            connected_device_ids=state.device_ids,
+            affected_transaction_ids=full_txn_ids or reasoning_output.affected_transaction_ids,
+            connected_card_ids=card_ids or reasoning_output.potentially_connected_cards,
+            connected_device_ids=state.device_ids or reasoning_output.potentially_connected_devices,
             exposure=reasoning_output.exposure,
             similar_prior_cases=state.connected_case_ids,
-            written_to_graph=False,
+            written_to_graph=written_to_graph_status,
             evidence_requests=evidence_req_results,
             next_best_actions_initial=["COLLECT_GRAPH_EVIDENCE", "EXTRACT_SUBGRAPH_SIGNALS"],
             next_best_actions_final=decision_result.recommended_actions,
@@ -355,7 +363,8 @@ class FraudInvestigatorAgent:
             tool_calls=[tc.model_dump() for tc in state.tool_calls],
             tokens=reasoning_output.llm_tokens if reasoning_output.llm_tokens else {"prompt": 0, "completion": 0, "total": 0},
             latency=reasoning_output.llm_latency if reasoning_output.llm_latency > 0 else latency,
-            reasoning_summary=reasoning_output.analytical_summary
+            reasoning_summary=reasoning_output.analytical_summary,
+            llm_fallback=getattr(reasoning_output, "llm_fallback", False)
         )
 
     # Method alias for API endpoint compatibility
