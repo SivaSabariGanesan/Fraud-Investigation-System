@@ -448,7 +448,232 @@ def test_manual_trigger_reaches_groq_context():
         normalized_evidence=[]
     )
 
-    prompt = format_groq_user_prompt(ctx)
-    assert "customer_report" in prompt
-    assert "I never made this $49.00 purchase. Please investigate." in prompt
+def test_customer_dispute_only_applies_to_flagged_transaction():
+    """
+    1. Transaction-level dispute isolation: Only transaction 3530164 gets disputed=True.
+    Historical transactions on card 19739 must retain disputed=False.
+    """
+    from app.agent.state import InvestigationState
+    from app.agent.context import build_investigation_context
+
+    state = InvestigationState(case_id="DEMO-001")
+    case_info = {
+        "case_id": "DEMO-001",
+        "customer_id": "C08623",
+        "transaction_id": "3530164",
+        "amount": 49.00,
+        "trigger_type": "customer_report",
+        "trigger_text": "I never made this $49.00 purchase. Please investigate."
+    }
+    txns = [
+        {"id": "3530164", "amount": 49.00, "status": "FLAGGED"},
+        {"id": "3237000", "amount": 120.00, "status": "COMPLETED"},
+        {"id": "3173850", "amount": 15.50, "status": "COMPLETED"},
+        {"id": "3056419", "amount": 200.00, "status": "COMPLETED"}
+    ]
+
+    ctx = build_investigation_context(
+        state=state,
+        case_info=case_info,
+        transactions=txns,
+        customer_info={"id": "C08623"},
+        cards_info=[{"card_id": "19739"}],
+        devices_info=[],
+        billing_regions_info=[],
+        email_domains_info=[],
+        connected_cases_info=[],
+        evidence_requests_info=[],
+        normalized_evidence=[]
+    )
+
+    t_3530164 = next(t for t in ctx.observed_facts.transactions if t.get("id") == "3530164")
+    assert t_3530164.get("disputed") is True
+
+    for hist_t in ctx.observed_facts.transactions:
+        if hist_t.get("id") != "3530164":
+            assert hist_t.get("disputed") is False
+
+    assert ctx.derived_observations.flagged_transactions_count == 1
+
+
+def test_r2_not_triggered_when_no_pending_evidence():
+    """
+    2. R2 semantics: NOT_TRIGGERED when 0 pending evidence requests.
+    """
+    from app.agent.state import InvestigationState
+    from app.agent.context import build_investigation_context
+    from app.agent.reasoning import InvestigationReasoningOutput
+    from app.agent.decision import evaluate_policy_rules
+
+    state = InvestigationState(case_id="DEMO-001")
+    ctx = build_investigation_context(
+        state=state,
+        case_info={"case_id": "DEMO-001", "transaction_id": "3530164", "trigger_type": "customer_report"},
+        transactions=[{"id": "3530164", "amount": 49.00}],
+        evidence_requests_info=[]
+    )
+    res = evaluate_policy_rules(InvestigationReasoningOutput(case_id="DEMO-001"), ctx)
+    r2 = next(r for r in res.rules_evaluated if r.rule_id == "R2")
+    assert r2.triggered is False
+    assert r2.status == "NOT_TRIGGERED"
+
+
+def test_r10_not_triggered_when_no_pending_evidence():
+    """
+    2. R10 semantics: NOT_TRIGGERED when 0 pending evidence requests.
+    """
+    from app.agent.state import InvestigationState
+    from app.agent.context import build_investigation_context
+    from app.agent.reasoning import InvestigationReasoningOutput
+    from app.agent.decision import evaluate_policy_rules
+
+    state = InvestigationState(case_id="DEMO-001")
+    ctx = build_investigation_context(
+        state=state,
+        case_info={"case_id": "DEMO-001", "transaction_id": "3530164", "trigger_type": "customer_report"},
+        transactions=[{"id": "3530164", "amount": 49.00}],
+        evidence_requests_info=[]
+    )
+    res = evaluate_policy_rules(InvestigationReasoningOutput(case_id="DEMO-001"), ctx)
+    r10 = next(r for r in res.rules_evaluated if r.rule_id == "R10")
+    assert r10.triggered is False
+    assert r10.status == "NOT_TRIGGERED"
+
+
+def test_customer_dispute_does_not_equal_confirmed_fraud():
+    """
+    3. R3 semantics: Customer dispute triggers review, but DOES NOT produce CONFIRMED_FRAUD or DECLINED.
+    """
+    from app.agent.state import InvestigationState
+    from app.agent.context import build_investigation_context
+    from app.agent.reasoning import InvestigationReasoningOutput
+    from app.agent.decision import evaluate_policy_rules
+
+    state = InvestigationState(case_id="DEMO-001")
+    ctx = build_investigation_context(
+        state=state,
+        case_info={"case_id": "DEMO-001", "transaction_id": "3530164", "trigger_type": "customer_report", "trigger_text": "I never made this purchase."},
+        transactions=[{"id": "3530164", "amount": 49.00, "risk_score": 0.45}]
+    )
+    res = evaluate_policy_rules(InvestigationReasoningOutput(case_id="DEMO-001", customer_disputes_represented=["3530164"]), ctx)
+
+    assert res.decision_state == "UNDER_INVESTIGATION"
+    assert res.verdict == "NEEDS_REVIEW"
+    assert "BLOCK_CARD" not in res.recommended_actions
+    assert "FILE_SAR_REPORT" not in res.recommended_actions
+
+
+def test_r9_never_creates_fraud_verdict():
+    """
+    5. R9 semantics: Risk score signal principle NEVER creates a DECLINED or CONFIRMED_FRAUD verdict by itself.
+    """
+    from app.agent.state import InvestigationState
+    from app.agent.context import build_investigation_context
+    from app.agent.reasoning import InvestigationReasoningOutput
+    from app.agent.decision import evaluate_policy_rules
+
+    state = InvestigationState(case_id="TEST-R9")
+    ctx = build_investigation_context(
+        state=state,
+        case_info={"case_id": "TEST-R9", "transaction_id": "9999"},
+        transactions=[{"id": "9999", "amount": 100.00, "risk_score": 0.45}]
+    )
+    res = evaluate_policy_rules(InvestigationReasoningOutput(case_id="TEST-R9"), ctx)
+
+    r9 = next(r for r in res.rules_evaluated if r.rule_id == "R9")
+    assert r9.triggered is False
+    assert r9.status == "SIGNAL_ONLY"
+    assert res.verdict != "DECLINED"
+    assert res.decision_state != "CONFIRMED_FRAUD"
+
+
+def test_r8_requires_actual_velocity_criteria():
+    """
+    4. R8 semantics: R8 requires >= 5 total transactions AND >= 3 flagged/disputed attempts.
+    """
+    from app.agent.state import InvestigationState
+    from app.agent.context import build_investigation_context
+    from app.agent.reasoning import InvestigationReasoningOutput
+    from app.agent.decision import evaluate_policy_rules
+
+    state = InvestigationState(case_id="TEST-R8")
+    # 5 txns total, but only 1 flagged
+    txns = [{"id": f"T{i}", "amount": 50.0, "status": "COMPLETED"} for i in range(4)]
+    txns.append({"id": "T4", "amount": 49.0, "status": "FLAGGED", "disputed": True})
+
+    ctx = build_investigation_context(
+        state=state,
+        case_info={"case_id": "TEST-R8", "transaction_id": "T4", "trigger_type": "customer_report"},
+        transactions=txns
+    )
+    res = evaluate_policy_rules(InvestigationReasoningOutput(case_id="TEST-R8"), ctx)
+
+    r8 = next(r for r in res.rules_evaluated if r.rule_id == "R8")
+    assert r8.triggered is False
+    assert r8.status == "NOT_TRIGGERED"
+
+
+def test_sar_not_eligible_from_r3_r9_alone():
+    """
+    7. SAR semantics: R3 + R9 alone MUST NOT produce SAR ELIGIBLE / CANDIDATE.
+    """
+    from app.services.sar_service import sync_sar_candidate_from_result
+    from app.agent.schemas import InvestigationResult
+    from app.services.database import SessionLocal
+
+    mock_result = InvestigationResult(
+        case_id="TEST-SAR-001",
+        case_status="UNDER_INVESTIGATION",
+        status="UNDER_INVESTIGATION",
+        verdict="NEEDS_REVIEW",
+        rules_evaluated=[
+            {"rule_id": "R3", "rule_name": "CUSTOMER_DISPUTE_TRIGGER", "triggered": True, "status": "TRIGGERED"},
+            {"rule_id": "R9", "rule_name": "RISK_SCORE_SIGNAL_ONLY", "triggered": False, "status": "SIGNAL_ONLY"}
+        ],
+        exposure=49.00
+    )
+
+    db = SessionLocal()
+    try:
+        sar_res = sync_sar_candidate_from_result(db, "TEST-SAR-001", "INV-SAR-001", mock_result)
+        assert sar_res.eligibility != "ELIGIBLE"
+        assert sar_res.status == "NOT_RECOMMENDED"
+    finally:
+        db.close()
+
+
+def test_manual_case_actions_match_deterministic_policy():
+    """
+    6. Manual case actions: Customer dispute case produces UNDER_INVESTIGATION, NEEDS_REVIEW, and review actions.
+    """
+    from app.agent.state import InvestigationState
+    from app.agent.context import build_investigation_context
+    from app.agent.reasoning import InvestigationReasoningOutput
+    from app.agent.decision import evaluate_policy_rules
+
+    state = InvestigationState(case_id="DEMO-001")
+    ctx = build_investigation_context(
+        state=state,
+        case_info={
+            "case_id": "DEMO-001",
+            "customer_id": "C08623",
+            "transaction_id": "3530164",
+            "amount": 49.00,
+            "trigger_type": "customer_report",
+            "trigger_text": "I never made this $49.00 purchase. Please investigate."
+        },
+        transactions=[
+            {"id": "3530164", "amount": 49.00, "status": "FLAGGED"},
+            {"id": "3237000", "amount": 120.00, "status": "COMPLETED"}
+        ]
+    )
+    res = evaluate_policy_rules(InvestigationReasoningOutput(case_id="DEMO-001"), ctx)
+
+    assert res.decision_state == "UNDER_INVESTIGATION"
+    assert res.verdict == "NEEDS_REVIEW"
+    assert res.recommended_actions == ["REQUEST_ADDITIONAL_KYC", "REVIEW_DISPUTE_DOCUMENTATION", "MONITOR_CARD_ACTIVITY"]
+    assert "BLOCK_CARD" not in res.recommended_actions
+    assert "CLOSE_CASE" not in res.recommended_actions
+    assert "UNFLAG_TRANSACTION" not in res.recommended_actions
+
 

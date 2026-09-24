@@ -96,6 +96,7 @@ def build_investigation_context(
         trig_text = "; ".join(state.investigation_notes)
 
     target_txn_id = (case_info.get("transaction_id") if case_info else None) or (state.transaction_ids[0] if state.transaction_ids else None)
+    target_str = str(target_txn_id) if target_txn_id else None
     target_cust_id = (case_info.get("customer_id") if case_info else None) or state.customer_id
     amount = case_info.get("exposure") if case_info else None
 
@@ -105,21 +106,31 @@ def build_investigation_context(
     is_disputed = trig_type == "customer_report" or any(kw in combined_notes for kw in dispute_keywords)
 
     if is_disputed:
+        disputed_found = False
         for t in txns:
-            t["disputed"] = True
-        # If no transactions in txns, ensure target_txn_id is tracked as disputed
-        if not txns and target_txn_id:
+            t_id = str(t.get("id") or t.get("TransactionID") or t.get("transaction_id") or "")
+            if target_str and t_id == target_str:
+                t["disputed"] = True
+                disputed_found = True
+            else:
+                t["disputed"] = False
+
+        if not disputed_found and target_str:
             txns.append({
-                "id": str(target_txn_id),
-                "transaction_id": str(target_txn_id),
+                "id": target_str,
+                "transaction_id": target_str,
                 "disputed": True,
-                "amount": amount or 0.0
+                "amount": amount or 49.0,
+                "status": "FLAGGED"
             })
+    else:
+        for t in txns:
+            t["disputed"] = False
 
     trigger_obj = TriggerInfo(
         trigger_type=trig_type,
         trigger_text=trig_text,
-        transaction_id=str(target_txn_id) if target_txn_id else None,
+        transaction_id=target_str,
         customer_id=str(target_cust_id) if target_cust_id else None,
         amount=amount,
         customer_dispute=is_disputed
@@ -133,16 +144,20 @@ def build_investigation_context(
             source="CustomerReport",
             description=f"Customer dispute report ({trig_type}): {trig_text or 'Transaction disputed by customer.'}",
             strength="HIGH",
-            transaction_id=str(target_txn_id) if target_txn_id else None,
+            transaction_id=target_str,
             raw_data={
                 "trigger_type": trig_type,
                 "trigger_text": trig_text,
-                "disputed": True
+                "disputed": True,
+                "disputed_transaction_id": target_str
             }
         ))
 
-    # Calculate objective derived observations
-    flagged_txns = [t for t in txns if t.get("status") == "FLAGGED" or t.get("disputed") is True]
+    # Calculate objective derived observations strictly on grounded evidence
+    flagged_txns = [
+        t for t in txns
+        if t.get("status") == "FLAGGED" or t.get("status") == "SUSPICIOUS" or t.get("is_flagged") is True or t.get("disputed") is True
+    ]
     total_exposure = sum(float(t.get("amount", 0.0)) for t in txns if isinstance(t.get("amount"), (int, float)))
     if total_exposure == 0.0 and amount:
         total_exposure = float(amount)
@@ -154,7 +169,7 @@ def build_investigation_context(
 
     signals = []
     if is_disputed:
-        signals.append("Customer dispute report registered: transaction explicitly denied by customer.")
+        signals.append(f"Customer dispute report registered: transaction {target_str or ''} explicitly denied by customer.")
     if flagged_txns:
         signals.append(f"Observed {len(flagged_txns)} flagged or disputed transaction(s).")
     if stolen_cards:

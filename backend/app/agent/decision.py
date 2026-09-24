@@ -200,16 +200,15 @@ def evaluate_policy_rules(
         triggered_ids.append("R8")
 
     # Rule R9: Risk Score Investigation Signal Principle
-    r9_triggered = True  # Always active as an evaluation principle
+    r9_triggered = False  # Signal principle only, never an independent fraud trigger
     rules.append(PolicyRuleResult(
         rule_id="R9",
         rule_name="RISK_SCORE_SIGNAL_ONLY",
-        triggered=r9_triggered,
-        status="TRIGGERED",
+        triggered=False,
+        status="SIGNAL_ONLY",
         description="Risk score is evaluated as an investigation signal, never as an automatic fraud verdict alone.",
         severity="INFO"
     ))
-    triggered_ids.append("R9")
 
     # Rule R10: Pending Evidence Request Override
     r10_triggered = has_pending_ev_req and not (has_stolen_card or r8_triggered)
