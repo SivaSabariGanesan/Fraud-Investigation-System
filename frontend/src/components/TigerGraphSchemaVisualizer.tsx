@@ -253,8 +253,8 @@ export const TigerGraphSchemaVisualizer: React.FC = () => {
             boxShadow: 'inset 0 0 40px rgba(0,0,0,0.6)',
           }}
         >
-          {/* Subtle Grid Background */}
-          <svg style={{ position: 'absolute', width: '100%', height: '100%', pointerEvents: 'none' }}>
+          {/* Interactive SVG Schema Graph Canvas */}
+          <svg style={{ position: 'absolute', width: '100%', height: '100%' }}>
             <defs>
               <pattern id="tg-grid" width="30" height="30" patternUnits="userSpaceOnUse">
                 <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(255, 255, 255, 0.03)" strokeWidth="1" />
