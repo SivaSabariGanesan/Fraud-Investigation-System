@@ -4,9 +4,10 @@ import { apiService } from '../services/api';
 
 interface NavbarProps {
   onSearchCase?: (caseId: string) => void;
+  onNavigateLanding?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onSearchCase }) => {
+export const Navbar: React.FC<NavbarProps> = ({ onSearchCase, onNavigateLanding }) => {
   const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [searchInput, setSearchInput] = useState('');
 
@@ -41,7 +42,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchCase }) => {
       }}
     >
       {/* Brand */}
-      <div className="flex items-center gap-2.5">
+      <div 
+        onClick={onNavigateLanding}
+        className="flex items-center gap-2.5 cursor-pointer select-none"
+        title="View System Architecture & Landing Page"
+      >
         <div
           className="w-7 h-7 rounded flex items-center justify-center"
           style={{ background: 'var(--accent)', flexShrink: 0 }}

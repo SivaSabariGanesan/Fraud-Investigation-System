@@ -1,10 +1,11 @@
 import React from 'react';
-import { LayoutDashboard, ShieldCheck, Database, Cpu } from 'lucide-react';
+import { LayoutDashboard, ShieldCheck, Database, Cpu, Layers } from 'lucide-react';
 
 interface SidebarProps {
-  activeTab: 'dashboard' | 'cases' | 'details';
+  activeTab: 'dashboard' | 'cases' | 'details' | 'landing';
   onNavigateDashboard: () => void;
   onNavigateCases: () => void;
+  onNavigateLanding: () => void;
   onNavigateDetails: (caseId?: string) => void;
   selectedCaseId: string | null;
 }
@@ -13,6 +14,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   onNavigateDashboard,
   onNavigateCases,
+  onNavigateLanding,
   onNavigateDetails,
   selectedCaseId,
 }) => {
@@ -41,6 +43,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
               label="Cases Directory"
               active={activeTab === 'cases'}
               onClick={onNavigateCases}
+            />
+            <NavItem
+              icon={<Layers className="w-3.5 h-3.5" />}
+              label="System Architecture"
+              active={activeTab === 'landing'}
+              onClick={onNavigateLanding}
             />
           </nav>
         </div>

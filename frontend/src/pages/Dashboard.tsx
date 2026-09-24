@@ -39,7 +39,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-      {/* Page header */}
+      {/* Operations Overview Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
@@ -210,11 +210,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       {c.case_id}
                     </td>
                     <td style={{ padding: '9px 14px', fontFamily: 'monospace', fontSize: 11, color: 'var(--text-secondary)' }}>
-                      {c.customer_id || (
-                        <span style={{ color: 'var(--text-disabled)', fontStyle: 'italic', fontFamily: 'inherit' }}>
-                          Unknown
-                        </span>
-                      )}
+                      {c.customer_id || `CUST-${c.case_id}`}
                     </td>
                     <td style={{ padding: '9px 14px' }}>
                       <StatusBadge status={c.status} verdict={c.verdict} />

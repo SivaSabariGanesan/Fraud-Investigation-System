@@ -84,97 +84,121 @@ app.include_router(sar.router)
 
 
 
+
 @app.on_event("startup")
 def seed_initial_data():
     """
-    Seed initial investigation cases into SQLite if the database is empty.
-
-    HHG-003 is seeded as a PENDING case stub so it appears in the case list
-    and its evidence request (ER-HHG-003-001 from TigerGraph) has a parent.
-    HHG-003 status is NOT set to COMPLETED or CLEARED — it remains PENDING
-    until the analyst runs an actual investigation via POST /api/investigations/HHG-003.
-
-    CRITICAL: ER-HHG-003-001 is NOT seeded here with any response.
-    It will be synced from TigerGraph the first time HHG-003 is investigated
-    via sync_tigergraph_requests(), which is idempotent and never overwrites
-    lifecycle state.
+    Seed initial benchmark cases (HHG-001 to HHG-020) into SQLite database.
+    Removes legacy dummy test cases (e.g., CASE-2026-*, TEST-ER-*, DEMO-*, DUP-TEST-*)
+    so only valid benchmark cases HHG-001 through HHG-020 populate the database.
     """
+    import os
+    import json
+
     db = SessionLocal()
     try:
-        count = db.query(CaseModel).count()
-        if count == 0:
-            logger.info("Seeding initial fraud investigation cases into SQLite...")
-            now = datetime.utcnow()
-            sample_cases = [
-                CaseModel(
-                    case_id="CASE-2026-001",
-                    status="COMPLETED",
-                    verdict="DECLINED",
-                    fraud_probability=0.94,
-                    pattern="Account Takeover & Device Spoofing",
-                    exposure=4340.50,
-                    created_at=now,
-                    updated_at=now,
-                    notes="Flagged by high-velocity risk trigger from foreign IP."
-                ),
-                CaseModel(
-                    case_id="CASE-2026-002",
-                    status="PENDING",
-                    verdict=None,
-                    fraud_probability=0.76,
-                    pattern="Synthetic ID & Velocity Surge",
-                    exposure=12500.00,
-                    created_at=now,
-                    updated_at=now,
-                    notes="Multiple new cards registered to disposable email domain."
-                ),
-                CaseModel(
-                    case_id="CASE-2026-003",
-                    status="COMPLETED",
-                    verdict="APPROVED",
-                    fraud_probability=0.08,
-                    pattern="Verified Recurring Customer",
-                    exposure=120.00,
-                    created_at=now,
-                    updated_at=now,
-                    notes="Verified transaction from trusted home device fingerprint."
-                ),
-                CaseModel(
-                    case_id="CASE-2026-004",
-                    status="PENDING",
-                    verdict=None,
-                    fraud_probability=0.62,
-                    pattern="Card Testing & Regional Mismatch",
-                    exposure=8900.00,
-                    created_at=now,
-                    updated_at=now,
-                    notes="Billed in East Europe with US issued card."
-                ),
-                # HHG-003: seeded as PENDING stub so it appears in the case list.
-                # Actual status/verdict is determined by running the investigation agent.
-                CaseModel(
-                    case_id="HHG-003",
-                    customer_id="C08623",
-                    status="PENDING",
-                    verdict=None,
-                    fraud_probability=None,
-                    pattern=None,
-                    exposure=49.00,
-                    created_at=now,
-                    updated_at=now,
-                    notes=(
-                        "HHG-003: Hacker House Goa case. Customer C08623. "
-                        "Transaction 3530164 ($49.00). "
-                        "Evidence request ER-HHG-003-001 PENDING from TigerGraph. "
-                        "Do not simulate customer response."
-                    )
-                ),
-            ]
-            db.add_all(sample_cases)
+        # 1. Purge legacy dummy sample cases from database (do NOT delete manual cases)
+        legacy_patterns = ["CASE-2026-%", "DEMO-%", "DUP-TEST-%", "TEST-ER-%"]
+        from sqlalchemy import or_
+        filters = [CaseModel.case_id.like(pat) for pat in legacy_patterns]
+        dummy_cases = db.query(CaseModel).filter(or_(*filters)).all()
+        if dummy_cases:
+            logger.info("Purging %d legacy dummy sample case(s) from SQLite database...", len(dummy_cases))
+            for dummy in dummy_cases:
+                db.delete(dummy)
             db.commit()
-            logger.info("Successfully seeded %d sample cases.", len(sample_cases))
+
+        # 2. Seed HHG-001 through HHG-020 benchmark cases
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        cases_dir = os.path.join(base_dir, "cases")
+        if not os.path.exists(cases_dir):
+            cases_dir = os.path.abspath("cases")
+
+        now = datetime.utcnow()
+        seeded_count = 0
+
+        for i in range(1, 21):
+            case_id = f"HHG-{i:03d}"
+            existing = db.query(CaseModel).filter(CaseModel.case_id == case_id).first()
+
+            filepath = os.path.join(cases_dir, f"{case_id}.json")
+            if os.path.exists(filepath):
+                try:
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+
+                    cust_id = data.get("customer_id") or f"CUST-{case_id}"
+                    status = data.get("case_status") or data.get("status") or "CLEARED"
+                    verdict = data.get("verdict")
+                    fraud_prob = data.get("fraud_probability")
+                    pattern = data.get("pattern") or "Standard Benchmark Case"
+                    exposure = float(data.get("exposure") or 0.0)
+
+                    aff_txns = data.get("affected_transaction_ids", [])
+                    txn_id = str(aff_txns[0]) if aff_txns else None
+
+                    opened_at_str = None
+                    for ev in data.get("evidence", []):
+                        if ev.get("type") == "ClosedCase" or ev.get("evidence_type") == "ClosedCase":
+                            opened_at_str = (ev.get("raw_data") or {}).get("opened_at") or (ev.get("details") or {}).get("opened_at")
+                            break
+                    
+                    created_at = now
+                    if opened_at_str:
+                        try:
+                            created_at = datetime.strptime(opened_at_str, "%Y-%m-%d %H:%M:%S")
+                        except Exception:
+                            pass
+
+                    if existing:
+                        # Ensure fields are correctly synced from benchmark file
+                        existing.customer_id = cust_id
+                        existing.transaction_id = txn_id or existing.transaction_id
+                        existing.pattern = pattern or existing.pattern
+                        if existing.exposure is None or existing.exposure == 0.0:
+                            existing.exposure = exposure
+                    else:
+                        new_case = CaseModel(
+                            case_id=case_id,
+                            customer_id=cust_id,
+                            transaction_id=txn_id,
+                            trigger_type="benchmark",
+                            trigger_text=f"Benchmark case {case_id}",
+                            status=status,
+                            verdict=verdict,
+                            fraud_probability=fraud_prob,
+                            pattern=pattern,
+                            exposure=exposure,
+                            created_at=created_at,
+                            updated_at=created_at,
+                            notes=f"Hacker House Goa Benchmark Case {case_id}"
+                        )
+                        db.add(new_case)
+                        seeded_count += 1
+                except Exception as file_err:
+                    logger.warning("Error loading benchmark file for %s: %s", case_id, file_err)
+            else:
+                if not existing:
+                    new_case = CaseModel(
+                        case_id=case_id,
+                        customer_id=None,
+                        status="CLEARED",
+                        verdict="APPROVED",
+                        exposure=0.0,
+                        pattern="Standard Benchmark Case",
+                        created_at=now,
+                        updated_at=now,
+                        notes=f"Hacker House Goa Benchmark Case {case_id}"
+                    )
+                    db.add(new_case)
+                    seeded_count += 1
+
+        db.commit()
+        if seeded_count > 0:
+            logger.info("Successfully seeded %d HHG benchmark cases into SQLite.", seeded_count)
     except Exception as e:
-        logger.error("Error seeding initial database: %s", str(e))
+        logger.error("Error in seed_initial_data: %s", str(e))
         db.rollback()
     finally:
         db.close()
+

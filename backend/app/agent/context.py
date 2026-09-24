@@ -161,7 +161,15 @@ def build_investigation_context(
     total_exposure = sum(float(t.get("amount", 0.0)) for t in txns if isinstance(t.get("amount"), (int, float)))
     if total_exposure == 0.0 and amount:
         total_exposure = float(amount)
-    stolen_cards = [c for c in cards if c.get("stolen_flag") is True]
+    is_stolen_card_note = "stolen card" in combined_notes or "card stolen" in combined_notes
+    if is_stolen_card_note:
+        if not cards:
+            cards.append({"id": "CARD-STOLEN", "stolen_flag": True})
+        else:
+            for c in cards:
+                c["stolen_flag"] = True
+
+    stolen_cards = [c for c in cards if c.get("stolen_flag") is True or c.get("stolen") is True]
     vpn_devices = [d for d in devs if d.get("vpn_detected") is True]
     geo_mismatches = [r for r in regions if r.get("mismatch_flag") is True]
     disp_domains = [dom for dom in domains if dom.get("disposable") is True]

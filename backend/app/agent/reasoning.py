@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class KeyEvidenceItem(BaseModel):
     """Schema for individual evidence finding item in LLM output."""
     evidence_id: str
-    finding: str
+    finding: str = ""
     significance: str = "NEUTRAL"  # LOW, MEDIUM, HIGH, NEUTRAL
 
 class GroqLLMReasoningSchema(BaseModel):

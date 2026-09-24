@@ -5,11 +5,12 @@ import { CreateInvestigationModal } from './components/CreateInvestigationModal'
 import { Dashboard } from './pages/Dashboard';
 import { Cases } from './pages/Cases';
 import { CaseDetails } from './pages/CaseDetails';
+import { Landing } from './pages/Landing';
 import { Case } from './types/investigation';
 import { apiService } from './services/api';
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cases' | 'details'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cases' | 'details' | 'landing'>('dashboard');
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -29,6 +30,10 @@ export function App() {
     }
     if (path.startsWith('/cases')) {
       setActiveTab('cases');
+      return;
+    }
+    if (path.startsWith('/architecture') || path.startsWith('/landing')) {
+      setActiveTab('landing');
       return;
     }
     setActiveTab('dashboard');
@@ -71,6 +76,11 @@ export function App() {
     window.history.pushState({}, '', '/cases');
   };
 
+  const navigateToLanding = () => {
+    setActiveTab('landing');
+    window.history.pushState({}, '', '/architecture');
+  };
+
   const navigateToCaseDetails = (caseId: string) => {
     setSelectedCaseId(caseId);
     setActiveTab('details');
@@ -79,19 +89,27 @@ export function App() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column' }}>
-      <Navbar onSearchCase={navigateToCaseDetails} />
+      <Navbar onSearchCase={navigateToCaseDetails} onNavigateLanding={navigateToLanding} />
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <Sidebar
           activeTab={activeTab}
           onNavigateDashboard={navigateToDashboard}
           onNavigateCases={navigateToCases}
+          onNavigateLanding={navigateToLanding}
           onNavigateDetails={(id) => navigateToCaseDetails(id || selectedCaseId || '')}
           selectedCaseId={selectedCaseId}
         />
 
         <main style={{ flex: 1, overflowY: 'auto', padding: '24px 28px', background: 'var(--bg-base)' }}>
           <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+            {activeTab === 'landing' && (
+              <Landing
+                onNavigateDashboard={navigateToDashboard}
+                onNewInvestigation={() => setIsCreateModalOpen(true)}
+              />
+            )}
+
             {activeTab === 'dashboard' && (
               <Dashboard
                 cases={cases}

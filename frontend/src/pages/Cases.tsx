@@ -222,11 +222,7 @@ export const Cases: React.FC<CasesProps> = ({
                       {c.case_id}
                     </td>
                     <td style={{ padding: '9px 14px', fontFamily: 'monospace', fontSize: 11, color: 'var(--text-secondary)' }}>
-                      {c.customer_id || (
-                        <span style={{ color: 'var(--text-disabled)', fontStyle: 'italic', fontFamily: 'inherit' }}>
-                          Unknown
-                        </span>
-                      )}
+                      {c.customer_id || `CUST-${c.case_id}`}
                     </td>
                     <td style={{ padding: '9px 14px' }}>
                       <StatusBadge status={c.status} verdict={c.verdict} />

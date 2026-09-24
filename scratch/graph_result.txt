@@ -1,0 +1,17 @@
+=== DEMO-001 GRAPH NODES ===
+ID: ClosedCase:DEMO-001 | Type: ClosedCase | Label: DEMO-001
+ID: Customer:C08623 | Type: Customer | Label: Customer C08623
+ID: Card:19739 | Type: Card | Label: Card 19739
+ID: Transaction:3530164 | Type: Transaction | Label: Txn 3530164
+ID: EmailDomain:me.com | Type: EmailDomain | Label: me.com
+ID: BillingRegion:330.0 | Type: BillingRegion | Label: Region 330.0
+
+=== DEMO-001 GRAPH EDGES ===
+Edge: involves:ClosedCase:DEMO-001-Transaction:3530164 | Type: INVOLVES | ClosedCase:DEMO-001 -> Transaction:3530164
+Edge: made:Card:19739-Transaction:3530164 | Type: MADE | Card:19739 -> Transaction:3530164
+Edge: owns:Customer:C08623-Card:19739 | Type: OWNS | Customer:C08623 -> Card:19739
+Edge: purchaser_email:Transaction:3530164-EmailDomain:me.com | Type: PURCHASER_EMAIL | Transaction:3530164 -> EmailDomain:me.com
+Edge: billed_in:Transaction:3530164-BillingRegion:330.0 | Type: BILLED_IN | Transaction:3530164 -> BillingRegion:330.0
+
+HHG-003 Nodes count: 5
+HHG-003 Edges count: 5
