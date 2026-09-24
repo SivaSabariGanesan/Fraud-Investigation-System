@@ -1,11 +1,11 @@
 {
   "case_id": "HHG-015",
-  "customer_id": null,
+  "customer_id": "CUST-HHG015",
   "case_status": "UNDER_INVESTIGATION",
   "status": "UNDER_INVESTIGATION",
   "verdict": "NEEDS_REVIEW",
   "fraud_probability": null,
-  "pattern": "Unknown case status and customer dispute report",
+  "pattern": "Customer Dispute / Unauthorized Transaction Report",
   "evidence": [
     {
       "evidence_id": "EV-CASE-HHG-015",
@@ -42,15 +42,137 @@
         "id": "HHG-015"
       },
       "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-CUST-CUST-HHG015",
+      "evidence_type": "Customer",
+      "source": "TigerGraph",
+      "description": "Customer record 'CUST-HHG015' (UNNAMED) observed with recorded risk_level='UNSPECIFIED'.",
+      "related_entity": "CUST-HHG015",
+      "transaction_id": null,
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "id": "CUST-HHG015",
+        "customer_id": "CUST-HHG015"
+      },
+      "timestamp": null,
+      "id": "EV-CUST-CUST-HHG015",
+      "type": "Customer",
+      "details": {
+        "id": "CUST-HHG015",
+        "customer_id": "CUST-HHG015"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-CARD-3464869",
+      "evidence_type": "card",
+      "source": "TigerGraph",
+      "description": "Card record '3464869' (UNKNOWN, UNKNOWN) observed. Stolen flag set to False.",
+      "related_entity": null,
+      "transaction_id": null,
+      "card_id": "3464869",
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "card_id": "3464869",
+        "id": "3464869"
+      },
+      "timestamp": null,
+      "id": "EV-CARD-3464869",
+      "type": "card",
+      "details": {
+        "card_id": "3464869",
+        "id": "3464869"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-TXN-TXN-HHG-015",
+      "evidence_type": "Transaction",
+      "source": "TigerGraph",
+      "description": "Transaction 'TXN-HHG-015' observed: amount=49.0 USD, status='FLAGGED'.",
+      "related_entity": null,
+      "transaction_id": "TXN-HHG-015",
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "id": "TXN-HHG-015",
+        "TransactionID": "TXN-HHG-015",
+        "transaction_id": "TXN-HHG-015",
+        "amount": 49.0,
+        "risk_score": 0.77,
+        "channel": "online",
+        "status": "FLAGGED",
+        "raw_edge_id": " online) at 0.77. Review and decide.\""
+      },
+      "timestamp": null,
+      "id": "EV-TXN-TXN-HHG-015",
+      "type": "Transaction",
+      "details": {
+        "id": "TXN-HHG-015",
+        "TransactionID": "TXN-HHG-015",
+        "transaction_id": "TXN-HHG-015",
+        "amount": 49.0,
+        "risk_score": 0.77,
+        "channel": "online",
+        "status": "FLAGGED",
+        "raw_edge_id": " online) at 0.77. Review and decide.\""
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-RELCASE-HHG-015",
+      "evidence_type": "related_case",
+      "source": "TigerGraph",
+      "description": "Connected ClosedCase 'HHG-015' linked to card 'None' with verdict='UNSPECIFIED' and type='UNSPECIFIED'.",
+      "related_entity": "HHG-015",
+      "transaction_id": null,
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "case_id": "HHG-015",
+        "outcome": "",
+        "pattern": "",
+        "opened_at": "2016-11-17 19:03:36",
+        "closed_at": "1970-01-01 00:00:00",
+        "exposure_usd": 0,
+        "report_filed": false,
+        "analyst_notes": "",
+        "id": "HHG-015"
+      },
+      "timestamp": null,
+      "id": "EV-RELCASE-HHG-015",
+      "type": "related_case",
+      "details": {
+        "case_id": "HHG-015",
+        "outcome": "",
+        "pattern": "",
+        "opened_at": "2016-11-17 19:03:36",
+        "closed_at": "1970-01-01 00:00:00",
+        "exposure_usd": 0,
+        "report_filed": false,
+        "analyst_notes": "",
+        "id": "HHG-015"
+      },
+      "risk_signal": null
     }
   ],
-  "affected_transaction_ids": [],
-  "connected_cards": [],
-  "connected_card_ids": [],
+  "affected_transaction_ids": [
+    "TXN-HHG-015"
+  ],
+  "connected_cards": [
+    "3464869"
+  ],
+  "connected_card_ids": [
+    "3464869"
+  ],
   "connected_devices": [],
   "connected_device_ids": [],
-  "exposure": 0.0,
-  "similar_prior_cases": [],
+  "exposure": 49.0,
+  "similar_prior_cases": [
+    "HHG-015"
+  ],
   "written_to_graph": false,
   "evidence_requests": [],
   "next_best_actions": [
@@ -71,10 +193,10 @@
     "sar_id": "SAR-518E3BAA",
     "status": "NOT_RECOMMENDED",
     "eligibility": "NOT_ELIGIBLE",
-    "exposure_usd": 0.0,
+    "exposure_usd": 49.0,
     "reason": "No confirmed fraud policy triggers met.",
     "created_at": "2026-09-23T17:26:49.508575",
-    "updated_at": "2026-09-24T22:45:03.361973"
+    "updated_at": "2026-09-24T23:12:08.790505"
   },
   "stop_reason": "WORKFLOW_COMPLETE",
   "rules_evaluated": [
@@ -159,7 +281,7 @@
       "severity": "HIGH"
     }
   ],
-  "reasoning_summary": "Investigation case HHG-015: Customer dispute report and closed case record, with risk signals indicating potential issues.",
+  "reasoning_summary": "Investigation HHG-015 triggered by customer report with disputed transaction, high risk signal, and closed case status 'UNKNOWN' with unspecific verdict.",
   "tool_calls": [
     {
       "tool_name": "get_case",
@@ -179,7 +301,7 @@
         "analyst_notes": "",
         "id": "HHG-015"
       },
-      "timestamp": "2026-09-24T22:44:34.346394",
+      "timestamp": "2026-09-24T23:11:25.708613",
       "error": null
     },
     {
@@ -189,52 +311,127 @@
           "HHG-015"
         ]
       },
+      "result": [
+        {
+          "id": "TXN-HHG-015",
+          "TransactionID": "TXN-HHG-015",
+          "transaction_id": "TXN-HHG-015",
+          "amount": 49.0,
+          "risk_score": 0.77,
+          "channel": "online",
+          "status": "FLAGGED",
+          "raw_edge_id": " online) at 0.77. Review and decide.\""
+        }
+      ],
+      "timestamp": "2026-09-24T23:11:34.151162",
+      "error": null
+    },
+    {
+      "tool_name": "get_transaction_card",
+      "arguments": {
+        "args": [
+          "TXN-HHG-015"
+        ]
+      },
+      "result": null,
+      "timestamp": "2026-09-24T23:11:34.962002",
+      "error": null
+    },
+    {
+      "tool_name": "get_transaction_card",
+      "arguments": {
+        "args": [
+          "TXN-HHG-015"
+        ]
+      },
+      "result": null,
+      "timestamp": "2026-09-24T23:11:44.269302",
+      "error": null
+    },
+    {
+      "tool_name": "get_customer",
+      "arguments": {
+        "args": [
+          "CUST-HHG015"
+        ]
+      },
+      "result": null,
+      "timestamp": "2026-09-24T23:11:45.060904",
+      "error": null
+    },
+    {
+      "tool_name": "get_card_transactions",
+      "arguments": {
+        "args": [
+          "3464869"
+        ]
+      },
       "result": [],
-      "timestamp": "2026-09-24T22:44:39.856809",
+      "timestamp": "2026-09-24T23:11:45.816493",
       "error": null
     },
     {
       "tool_name": "get_transaction_devices",
       "arguments": {
         "args": [
-          []
+          [
+            "TXN-HHG-015"
+          ]
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T22:44:45.565391",
+      "timestamp": "2026-09-24T23:11:46.691272",
       "error": null
     },
     {
       "tool_name": "get_transaction_regions",
       "arguments": {
         "args": [
-          []
+          [
+            "TXN-HHG-015"
+          ]
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T22:44:45.565391",
+      "timestamp": "2026-09-24T23:11:47.450291",
       "error": null
     },
     {
       "tool_name": "get_transaction_email_domains",
       "arguments": {
         "args": [
-          []
+          [
+            "TXN-HHG-015"
+          ]
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T22:44:45.565928",
+      "timestamp": "2026-09-24T23:11:48.183404",
       "error": null
     },
     {
       "tool_name": "get_connected_cases",
       "arguments": {
         "args": [
-          []
+          [
+            "3464869"
+          ]
         ]
       },
-      "result": [],
-      "timestamp": "2026-09-24T22:44:45.565928",
+      "result": [
+        {
+          "case_id": "HHG-015",
+          "outcome": "",
+          "pattern": "",
+          "opened_at": "2016-11-17 19:03:36",
+          "closed_at": "1970-01-01 00:00:00",
+          "exposure_usd": 0,
+          "report_filed": false,
+          "analyst_notes": "",
+          "id": "HHG-015"
+        }
+      ],
+      "timestamp": "2026-09-24T23:11:49.716014",
       "error": null
     },
     {
@@ -245,14 +442,14 @@
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T22:44:53.010727",
+      "timestamp": "2026-09-24T23:11:59.366035",
       "error": null
     }
   ],
   "tokens": {
-    "prompt": 962,
-    "completion": 324,
-    "total": 1286
+    "prompt": 1280,
+    "completion": 474,
+    "total": 1754
   },
-  "latency": 9.42
+  "latency": 8.609
 }

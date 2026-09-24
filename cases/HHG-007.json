@@ -1,11 +1,11 @@
 {
   "case_id": "HHG-007",
-  "customer_id": null,
+  "customer_id": "CUST-HHG007",
   "case_status": "UNDER_INVESTIGATION",
   "status": "UNDER_INVESTIGATION",
   "verdict": "NEEDS_REVIEW",
   "fraud_probability": null,
-  "pattern": "High customer dispute report with unknown case status",
+  "pattern": "No clear indication of suspicious activity or red flags in the customer record or transaction data",
   "evidence": [
     {
       "evidence_id": "EV-CASE-HHG-007",
@@ -42,15 +42,137 @@
         "id": "HHG-007"
       },
       "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-CUST-CUST-HHG007",
+      "evidence_type": "Customer",
+      "source": "TigerGraph",
+      "description": "Customer record 'CUST-HHG007' (UNNAMED) observed with recorded risk_level='UNSPECIFIED'.",
+      "related_entity": "CUST-HHG007",
+      "transaction_id": null,
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "id": "CUST-HHG007",
+        "customer_id": "CUST-HHG007"
+      },
+      "timestamp": null,
+      "id": "EV-CUST-CUST-HHG007",
+      "type": "Customer",
+      "details": {
+        "id": "CUST-HHG007",
+        "customer_id": "CUST-HHG007"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-CARD-3514948",
+      "evidence_type": "card",
+      "source": "TigerGraph",
+      "description": "Card record '3514948' (UNKNOWN, UNKNOWN) observed. Stolen flag set to False.",
+      "related_entity": null,
+      "transaction_id": null,
+      "card_id": "3514948",
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "card_id": "3514948",
+        "id": "3514948"
+      },
+      "timestamp": null,
+      "id": "EV-CARD-3514948",
+      "type": "card",
+      "details": {
+        "card_id": "3514948",
+        "id": "3514948"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-TXN-TXN-HHG-007",
+      "evidence_type": "Transaction",
+      "source": "TigerGraph",
+      "description": "Transaction 'TXN-HHG-007' observed: amount=264.0 USD, status='FLAGGED'.",
+      "related_entity": null,
+      "transaction_id": "TXN-HHG-007",
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "id": "TXN-HHG-007",
+        "TransactionID": "TXN-HHG-007",
+        "transaction_id": "TXN-HHG-007",
+        "amount": 264.0,
+        "risk_score": 0.87,
+        "channel": "in_person",
+        "status": "FLAGGED",
+        "raw_edge_id": " in billing region 264.0) at 0.87. Review and decide.\""
+      },
+      "timestamp": null,
+      "id": "EV-TXN-TXN-HHG-007",
+      "type": "Transaction",
+      "details": {
+        "id": "TXN-HHG-007",
+        "TransactionID": "TXN-HHG-007",
+        "transaction_id": "TXN-HHG-007",
+        "amount": 264.0,
+        "risk_score": 0.87,
+        "channel": "in_person",
+        "status": "FLAGGED",
+        "raw_edge_id": " in billing region 264.0) at 0.87. Review and decide.\""
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-RELCASE-HHG-007",
+      "evidence_type": "related_case",
+      "source": "TigerGraph",
+      "description": "Connected ClosedCase 'HHG-007' linked to card 'None' with verdict='UNSPECIFIED' and type='UNSPECIFIED'.",
+      "related_entity": "HHG-007",
+      "transaction_id": null,
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "case_id": "HHG-007",
+        "outcome": "",
+        "pattern": "",
+        "opened_at": "2016-12-05 03:46:14",
+        "closed_at": "1970-01-01 00:00:00",
+        "exposure_usd": 0,
+        "report_filed": false,
+        "analyst_notes": "",
+        "id": "HHG-007"
+      },
+      "timestamp": null,
+      "id": "EV-RELCASE-HHG-007",
+      "type": "related_case",
+      "details": {
+        "case_id": "HHG-007",
+        "outcome": "",
+        "pattern": "",
+        "opened_at": "2016-12-05 03:46:14",
+        "closed_at": "1970-01-01 00:00:00",
+        "exposure_usd": 0,
+        "report_filed": false,
+        "analyst_notes": "",
+        "id": "HHG-007"
+      },
+      "risk_signal": null
     }
   ],
-  "affected_transaction_ids": [],
-  "connected_cards": [],
-  "connected_card_ids": [],
+  "affected_transaction_ids": [
+    "TXN-HHG-007"
+  ],
+  "connected_cards": [
+    "3514948"
+  ],
+  "connected_card_ids": [
+    "3514948"
+  ],
   "connected_devices": [],
   "connected_device_ids": [],
-  "exposure": 0.0,
-  "similar_prior_cases": [],
+  "exposure": 264.0,
+  "similar_prior_cases": [
+    "HHG-007"
+  ],
   "written_to_graph": false,
   "evidence_requests": [],
   "next_best_actions": [
@@ -71,10 +193,10 @@
     "sar_id": "SAR-144AF209",
     "status": "NOT_RECOMMENDED",
     "eligibility": "NOT_ELIGIBLE",
-    "exposure_usd": 0.0,
+    "exposure_usd": 264.0,
     "reason": "No confirmed fraud policy triggers met.",
     "created_at": "2026-09-23T17:17:38.142862",
-    "updated_at": "2026-09-24T22:39:35.713436"
+    "updated_at": "2026-09-24T23:04:58.020327"
   },
   "stop_reason": "WORKFLOW_COMPLETE",
   "rules_evaluated": [
@@ -159,7 +281,7 @@
       "severity": "HIGH"
     }
   ],
-  "reasoning_summary": "Investigation analysis for case HHG-007, with high customer dispute report and unknown case status",
+  "reasoning_summary": "Investigation HHG-007 triggered by customer report, with a disputed transaction and a customer record. The case is currently closed with an unknown status and unspecified verdict. A card record is also present but lacks information on the card's origin.",
   "tool_calls": [
     {
       "tool_name": "get_case",
@@ -179,7 +301,7 @@
         "analyst_notes": "",
         "id": "HHG-007"
       },
-      "timestamp": "2026-09-24T22:39:11.703768",
+      "timestamp": "2026-09-24T23:04:16.417523",
       "error": null
     },
     {
@@ -189,52 +311,127 @@
           "HHG-007"
         ]
       },
+      "result": [
+        {
+          "id": "TXN-HHG-007",
+          "TransactionID": "TXN-HHG-007",
+          "transaction_id": "TXN-HHG-007",
+          "amount": 264.0,
+          "risk_score": 0.87,
+          "channel": "in_person",
+          "status": "FLAGGED",
+          "raw_edge_id": " in billing region 264.0) at 0.87. Review and decide.\""
+        }
+      ],
+      "timestamp": "2026-09-24T23:04:24.837638",
+      "error": null
+    },
+    {
+      "tool_name": "get_transaction_card",
+      "arguments": {
+        "args": [
+          "TXN-HHG-007"
+        ]
+      },
+      "result": null,
+      "timestamp": "2026-09-24T23:04:25.622901",
+      "error": null
+    },
+    {
+      "tool_name": "get_transaction_card",
+      "arguments": {
+        "args": [
+          "TXN-HHG-007"
+        ]
+      },
+      "result": null,
+      "timestamp": "2026-09-24T23:04:35.340013",
+      "error": null
+    },
+    {
+      "tool_name": "get_customer",
+      "arguments": {
+        "args": [
+          "CUST-HHG007"
+        ]
+      },
+      "result": null,
+      "timestamp": "2026-09-24T23:04:36.056447",
+      "error": null
+    },
+    {
+      "tool_name": "get_card_transactions",
+      "arguments": {
+        "args": [
+          "3514948"
+        ]
+      },
       "result": [],
-      "timestamp": "2026-09-24T22:39:17.294236",
+      "timestamp": "2026-09-24T23:04:36.837226",
       "error": null
     },
     {
       "tool_name": "get_transaction_devices",
       "arguments": {
         "args": [
-          []
+          [
+            "TXN-HHG-007"
+          ]
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T22:39:22.789334",
+      "timestamp": "2026-09-24T23:04:37.573304",
       "error": null
     },
     {
       "tool_name": "get_transaction_regions",
       "arguments": {
         "args": [
-          []
+          [
+            "TXN-HHG-007"
+          ]
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T22:39:22.789334",
+      "timestamp": "2026-09-24T23:04:38.323035",
       "error": null
     },
     {
       "tool_name": "get_transaction_email_domains",
       "arguments": {
         "args": [
-          []
+          [
+            "TXN-HHG-007"
+          ]
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T22:39:22.789334",
+      "timestamp": "2026-09-24T23:04:39.113488",
       "error": null
     },
     {
       "tool_name": "get_connected_cases",
       "arguments": {
         "args": [
-          []
+          [
+            "3514948"
+          ]
         ]
       },
-      "result": [],
-      "timestamp": "2026-09-24T22:39:22.789334",
+      "result": [
+        {
+          "case_id": "HHG-007",
+          "outcome": "",
+          "pattern": "",
+          "opened_at": "2016-12-05 03:46:14",
+          "closed_at": "1970-01-01 00:00:00",
+          "exposure_usd": 0,
+          "report_filed": false,
+          "analyst_notes": "",
+          "id": "HHG-007"
+        }
+      ],
+      "timestamp": "2026-09-24T23:04:40.730386",
       "error": null
     },
     {
@@ -245,14 +442,14 @@
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T22:39:29.083024",
+      "timestamp": "2026-09-24T23:04:49.995024",
       "error": null
     }
   ],
   "tokens": {
-    "prompt": 962,
-    "completion": 344,
-    "total": 1306
+    "prompt": 1281,
+    "completion": 410,
+    "total": 1691
   },
-  "latency": 5.821
+  "latency": 7.285
 }

@@ -5,7 +5,7 @@
   "status": "UNDER_INVESTIGATION",
   "verdict": "NEEDS_REVIEW",
   "fraud_probability": null,
-  "pattern": "Multiple transactions with unknown status",
+  "pattern": "Multiple transactions with similar characteristics (in-person, unknown status)",
   "evidence": [
     {
       "evidence_id": "EV-CASE-HHG-018",
@@ -62,6 +62,28 @@
       "details": {
         "customer_id": "C02354",
         "id": "C02354"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-CARD-C02354-K2",
+      "evidence_type": "card",
+      "source": "TigerGraph",
+      "description": "Card record 'C02354-K2' (UNKNOWN, UNKNOWN) observed. Stolen flag set to False.",
+      "related_entity": null,
+      "transaction_id": null,
+      "card_id": "C02354-K2",
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "card_id": "C02354-K2",
+        "id": "C02354-K2"
+      },
+      "timestamp": null,
+      "id": "EV-CARD-C02354-K2",
+      "type": "card",
+      "details": {
+        "card_id": "C02354-K2",
+        "id": "C02354-K2"
       },
       "risk_signal": null
     },
@@ -656,6 +678,42 @@
         "id": "hotmail.com"
       },
       "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-RELCASE-HHG-018",
+      "evidence_type": "related_case",
+      "source": "TigerGraph",
+      "description": "Connected ClosedCase 'HHG-018' linked to card 'None' with verdict='UNSPECIFIED' and type='UNSPECIFIED'.",
+      "related_entity": "HHG-018",
+      "transaction_id": null,
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "case_id": "HHG-018",
+        "outcome": "",
+        "pattern": "",
+        "opened_at": "2016-11-27 14:41:26",
+        "closed_at": "1970-01-01 00:00:00",
+        "exposure_usd": 0,
+        "report_filed": false,
+        "analyst_notes": "",
+        "id": "HHG-018"
+      },
+      "timestamp": null,
+      "id": "EV-RELCASE-HHG-018",
+      "type": "related_case",
+      "details": {
+        "case_id": "HHG-018",
+        "outcome": "",
+        "pattern": "",
+        "opened_at": "2016-11-27 14:41:26",
+        "closed_at": "1970-01-01 00:00:00",
+        "exposure_usd": 0,
+        "report_filed": false,
+        "analyst_notes": "",
+        "id": "HHG-018"
+      },
+      "risk_signal": null
     }
   ],
   "affected_transaction_ids": [
@@ -672,9 +730,11 @@
     "3046957"
   ],
   "connected_cards": [
+    "C02354-K2",
     "19248"
   ],
   "connected_card_ids": [
+    "C02354-K2",
     "19248"
   ],
   "connected_devices": [
@@ -684,7 +744,9 @@
     "iOS Device"
   ],
   "exposure": 1147.0899999999997,
-  "similar_prior_cases": [],
+  "similar_prior_cases": [
+    "HHG-018"
+  ],
   "written_to_graph": false,
   "evidence_requests": [],
   "next_best_actions": [
@@ -708,7 +770,7 @@
     "exposure_usd": 1147.0899999999997,
     "reason": "No confirmed fraud policy triggers met.",
     "created_at": "2026-09-23T17:28:02.721567",
-    "updated_at": "2026-09-24T22:47:16.745948"
+    "updated_at": "2026-09-24T23:15:00.270963"
   },
   "stop_reason": "WORKFLOW_COMPLETE",
   "rules_evaluated": [
@@ -793,7 +855,7 @@
       "severity": "HIGH"
     }
   ],
-  "reasoning_summary": "Case HHG-018: Customer Report Triggered, Closed Case Status with 'UNKNOWN' Verdict, Disputed Transactions Observed",
+  "reasoning_summary": "Case HHG-018: customer dispute report with multiple transactions observed, but no clear indication of fraud. Disputed transactions (3491361) may require further investigation.",
   "tool_calls": [
     {
       "tool_name": "get_case",
@@ -813,7 +875,7 @@
         "analyst_notes": "",
         "id": "HHG-018"
       },
-      "timestamp": "2026-09-24T22:46:23.247339",
+      "timestamp": "2026-09-24T23:13:57.788907",
       "error": null
     },
     {
@@ -834,7 +896,7 @@
           "id": "3491361"
         }
       ],
-      "timestamp": "2026-09-24T22:46:32.993128",
+      "timestamp": "2026-09-24T23:14:08.634816",
       "error": null
     },
     {
@@ -848,7 +910,7 @@
         "card_id": "19248",
         "id": "19248"
       },
-      "timestamp": "2026-09-24T22:46:34.656410",
+      "timestamp": "2026-09-24T23:14:10.129892",
       "error": null
     },
     {
@@ -862,7 +924,7 @@
         "card_id": "19248",
         "id": "19248"
       },
-      "timestamp": "2026-09-24T22:46:45.459363",
+      "timestamp": "2026-09-24T23:14:22.444364",
       "error": null
     },
     {
@@ -876,7 +938,7 @@
         "customer_id": "C02354",
         "id": "C02354"
       },
-      "timestamp": "2026-09-24T22:46:46.221676",
+      "timestamp": "2026-09-24T23:14:23.222240",
       "error": null
     },
     {
@@ -892,7 +954,18 @@
           "id": "19248"
         }
       ],
-      "timestamp": "2026-09-24T22:46:47.808992",
+      "timestamp": "2026-09-24T23:14:24.763629",
+      "error": null
+    },
+    {
+      "tool_name": "get_card_transactions",
+      "arguments": {
+        "args": [
+          "C02354-K2"
+        ]
+      },
+      "result": [],
+      "timestamp": "2026-09-24T23:14:25.526396",
       "error": null
     },
     {
@@ -994,7 +1067,7 @@
           "id": "3046957"
         }
       ],
-      "timestamp": "2026-09-24T22:46:51.460330",
+      "timestamp": "2026-09-24T23:14:30.292207",
       "error": null
     },
     {
@@ -1029,7 +1102,7 @@
           "id": "iOS Device"
         }
       ],
-      "timestamp": "2026-09-24T22:46:53.656275",
+      "timestamp": "2026-09-24T23:14:32.010362",
       "error": null
     },
     {
@@ -1068,7 +1141,7 @@
           "id": "330.0"
         }
       ],
-      "timestamp": "2026-09-24T22:46:55.634857",
+      "timestamp": "2026-09-24T23:14:33.706051",
       "error": null
     },
     {
@@ -1112,7 +1185,7 @@
           "id": "hotmail.com"
         }
       ],
-      "timestamp": "2026-09-24T22:46:57.719340",
+      "timestamp": "2026-09-24T23:14:35.417319",
       "error": null
     },
     {
@@ -1120,12 +1193,25 @@
       "arguments": {
         "args": [
           [
+            "C02354-K2",
             "19248"
           ]
         ]
       },
-      "result": [],
-      "timestamp": "2026-09-24T22:46:58.519404",
+      "result": [
+        {
+          "case_id": "HHG-018",
+          "outcome": "",
+          "pattern": "",
+          "opened_at": "2016-11-27 14:41:26",
+          "closed_at": "1970-01-01 00:00:00",
+          "exposure_usd": 0,
+          "report_filed": false,
+          "analyst_notes": "",
+          "id": "HHG-018"
+        }
+      ],
+      "timestamp": "2026-09-24T23:14:36.918853",
       "error": null
     },
     {
@@ -1136,14 +1222,14 @@
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T22:47:08.249659",
+      "timestamp": "2026-09-24T23:14:48.424627",
       "error": null
     }
   ],
   "tokens": {
-    "prompt": 2239,
-    "completion": 457,
-    "total": 2696
+    "prompt": 2249,
+    "completion": 358,
+    "total": 2607
   },
-  "latency": 7.636
+  "latency": 10.986
 }

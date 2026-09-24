@@ -945,7 +945,7 @@
     "exposure_usd": 1307.2199999999998,
     "reason": "Pending customer verification request exists. Insufficient grounded evidence to establish SAR eligibility.",
     "created_at": "2026-09-23T17:15:57.822946",
-    "updated_at": "2026-09-24T22:36:58.658073"
+    "updated_at": "2026-09-24T23:01:29.101488"
   },
   "stop_reason": "PENDING_EVIDENCE_RESPONSE",
   "rules_evaluated": [
@@ -1030,7 +1030,7 @@
       "severity": "HIGH"
     }
   ],
-  "reasoning_summary": "Investigation analysis for case HHG-003: customer dispute report and transactions with varying risk signals",
+  "reasoning_summary": "Investigation for HHG-003 triggered by customer report with a disputed transaction. The case has a closed status with an unknown verdict.",
   "tool_calls": [
     {
       "tool_name": "get_case",
@@ -1050,7 +1050,7 @@
         "analyst_notes": "",
         "id": "HHG-003"
       },
-      "timestamp": "2026-09-24T22:36:32.342108",
+      "timestamp": "2026-09-24T23:01:05.711710",
       "error": null
     },
     {
@@ -1071,7 +1071,7 @@
           "id": "3530164"
         }
       ],
-      "timestamp": "2026-09-24T22:36:33.105931",
+      "timestamp": "2026-09-24T23:01:06.540699",
       "error": null
     },
     {
@@ -1085,7 +1085,7 @@
         "card_id": "19739",
         "id": "19739"
       },
-      "timestamp": "2026-09-24T22:36:34.616267",
+      "timestamp": "2026-09-24T23:01:08.137532",
       "error": null
     },
     {
@@ -1099,7 +1099,7 @@
         "card_id": "19739",
         "id": "19739"
       },
-      "timestamp": "2026-09-24T22:36:36.959770",
+      "timestamp": "2026-09-24T23:01:10.417793",
       "error": null
     },
     {
@@ -1113,7 +1113,7 @@
         "customer_id": "C08623",
         "id": "C08623"
       },
-      "timestamp": "2026-09-24T22:36:37.688423",
+      "timestamp": "2026-09-24T23:01:11.192501",
       "error": null
     },
     {
@@ -1129,7 +1129,7 @@
           "id": "19739"
         }
       ],
-      "timestamp": "2026-09-24T22:36:39.226366",
+      "timestamp": "2026-09-24T23:01:12.676765",
       "error": null
     },
     {
@@ -1231,7 +1231,7 @@
           "id": "3250930"
         }
       ],
-      "timestamp": "2026-09-24T22:36:41.676264",
+      "timestamp": "2026-09-24T23:01:15.148553",
       "error": null
     },
     {
@@ -1277,7 +1277,7 @@
           "id": "MacOS"
         }
       ],
-      "timestamp": "2026-09-24T22:36:43.387411",
+      "timestamp": "2026-09-24T23:01:16.775926",
       "error": null
     },
     {
@@ -1351,7 +1351,7 @@
           "id": "194.0"
         }
       ],
-      "timestamp": "2026-09-24T22:36:45.325372",
+      "timestamp": "2026-09-24T23:01:18.507292",
       "error": null
     },
     {
@@ -1391,7 +1391,7 @@
           "id": "yahoo.com"
         }
       ],
-      "timestamp": "2026-09-24T22:36:47.286346",
+      "timestamp": "2026-09-24T23:01:20.361331",
       "error": null
     },
     {
@@ -1404,7 +1404,7 @@
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T22:36:48.147025",
+      "timestamp": "2026-09-24T23:01:21.111834",
       "error": null
     },
     {
@@ -1428,14 +1428,14 @@
           "id": "ER-HHG-003-001"
         }
       ],
-      "timestamp": "2026-09-24T22:36:48.923630",
+      "timestamp": "2026-09-24T23:01:21.869643",
       "error": null
     }
   ],
   "tokens": {
     "prompt": 2279,
-    "completion": 528,
-    "total": 2807
+    "completion": 333,
+    "total": 2612
   },
-  "latency": 8.893
+  "latency": 6.338
 }

@@ -5,7 +5,7 @@
   "status": "UNDER_INVESTIGATION",
   "verdict": "NEEDS_REVIEW",
   "fraud_probability": null,
-  "pattern": "A pattern of multiple transactions with unknown status, all with a channel of 'online' and product code 'C'.",
+  "pattern": "Customer Dispute / Unauthorized Transaction Report",
   "evidence": [
     {
       "evidence_id": "EV-CASE-HHG-016",
@@ -62,6 +62,28 @@
       "details": {
         "customer_id": "C09988",
         "id": "C09988"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-CARD-C09988-K1",
+      "evidence_type": "card",
+      "source": "TigerGraph",
+      "description": "Card record 'C09988-K1' (UNKNOWN, UNKNOWN) observed. Stolen flag set to False.",
+      "related_entity": null,
+      "transaction_id": null,
+      "card_id": "C09988-K1",
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "card_id": "C09988-K1",
+        "id": "C09988-K1"
+      },
+      "timestamp": null,
+      "id": "EV-CARD-C09988-K1",
+      "type": "card",
+      "details": {
+        "card_id": "C09988-K1",
+        "id": "C09988-K1"
       },
       "risk_signal": null
     },
@@ -562,6 +584,42 @@
         "id": "yahoo.fr"
       },
       "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-RELCASE-HHG-016",
+      "evidence_type": "related_case",
+      "source": "TigerGraph",
+      "description": "Connected ClosedCase 'HHG-016' linked to card 'None' with verdict='UNSPECIFIED' and type='UNSPECIFIED'.",
+      "related_entity": "HHG-016",
+      "transaction_id": null,
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "case_id": "HHG-016",
+        "outcome": "",
+        "pattern": "",
+        "opened_at": "2016-12-12 01:39:08",
+        "closed_at": "1970-01-01 00:00:00",
+        "exposure_usd": 0,
+        "report_filed": false,
+        "analyst_notes": "",
+        "id": "HHG-016"
+      },
+      "timestamp": null,
+      "id": "EV-RELCASE-HHG-016",
+      "type": "related_case",
+      "details": {
+        "case_id": "HHG-016",
+        "outcome": "",
+        "pattern": "",
+        "opened_at": "2016-12-12 01:39:08",
+        "closed_at": "1970-01-01 00:00:00",
+        "exposure_usd": 0,
+        "report_filed": false,
+        "analyst_notes": "",
+        "id": "HHG-016"
+      },
+      "risk_signal": null
     }
   ],
   "affected_transaction_ids": [
@@ -578,9 +636,11 @@
     "3374650"
   ],
   "connected_cards": [
+    "C09988-K1",
     "11242"
   ],
   "connected_card_ids": [
+    "C09988-K1",
     "11242"
   ],
   "connected_devices": [
@@ -590,7 +650,9 @@
     "Windows"
   ],
   "exposure": 594.0699999999999,
-  "similar_prior_cases": [],
+  "similar_prior_cases": [
+    "HHG-016"
+  ],
   "written_to_graph": false,
   "evidence_requests": [],
   "next_best_actions": [
@@ -614,7 +676,7 @@
     "exposure_usd": 594.0699999999999,
     "reason": "No confirmed fraud policy triggers met.",
     "created_at": "2026-09-23T17:27:14.056216",
-    "updated_at": "2026-09-24T22:45:57.157330"
+    "updated_at": "2026-09-24T23:13:10.309273"
   },
   "stop_reason": "WORKFLOW_COMPLETE",
   "rules_evaluated": [
@@ -699,7 +761,7 @@
       "severity": "HIGH"
     }
   ],
-  "reasoning_summary": "Investigation context for case HHG-016: customer report and disputed transaction trigger. Case is currently closed with unknown status and unspecified verdict.",
+  "reasoning_summary": "Investigation HHG-016: Disputed customer report and normalised graph evidence",
   "tool_calls": [
     {
       "tool_name": "get_case",
@@ -719,7 +781,7 @@
         "analyst_notes": "",
         "id": "HHG-016"
       },
-      "timestamp": "2026-09-24T22:45:04.173721",
+      "timestamp": "2026-09-24T23:12:09.526433",
       "error": null
     },
     {
@@ -740,7 +802,7 @@
           "id": "3534820"
         }
       ],
-      "timestamp": "2026-09-24T22:45:14.373874",
+      "timestamp": "2026-09-24T23:12:21.216246",
       "error": null
     },
     {
@@ -754,7 +816,7 @@
         "card_id": "11242",
         "id": "11242"
       },
-      "timestamp": "2026-09-24T22:45:15.939309",
+      "timestamp": "2026-09-24T23:12:22.790971",
       "error": null
     },
     {
@@ -768,7 +830,7 @@
         "card_id": "11242",
         "id": "11242"
       },
-      "timestamp": "2026-09-24T22:45:27.297846",
+      "timestamp": "2026-09-24T23:12:35.856431",
       "error": null
     },
     {
@@ -782,7 +844,7 @@
         "customer_id": "C09988",
         "id": "C09988"
       },
-      "timestamp": "2026-09-24T22:45:28.089318",
+      "timestamp": "2026-09-24T23:12:36.590896",
       "error": null
     },
     {
@@ -798,7 +860,18 @@
           "id": "11242"
         }
       ],
-      "timestamp": "2026-09-24T22:45:29.799590",
+      "timestamp": "2026-09-24T23:12:38.136918",
+      "error": null
+    },
+    {
+      "tool_name": "get_card_transactions",
+      "arguments": {
+        "args": [
+          "C09988-K1"
+        ]
+      },
+      "result": [],
+      "timestamp": "2026-09-24T23:12:38.895841",
       "error": null
     },
     {
@@ -900,7 +973,7 @@
           "id": "3374650"
         }
       ],
-      "timestamp": "2026-09-24T22:45:31.611346",
+      "timestamp": "2026-09-24T23:12:40.482480",
       "error": null
     },
     {
@@ -935,7 +1008,7 @@
           "id": "Windows"
         }
       ],
-      "timestamp": "2026-09-24T22:45:33.590373",
+      "timestamp": "2026-09-24T23:12:42.206854",
       "error": null
     },
     {
@@ -958,7 +1031,7 @@
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T22:45:34.561424",
+      "timestamp": "2026-09-24T23:12:43.123261",
       "error": null
     },
     {
@@ -998,7 +1071,7 @@
           "id": "yahoo.fr"
         }
       ],
-      "timestamp": "2026-09-24T22:45:36.513964",
+      "timestamp": "2026-09-24T23:12:44.847391",
       "error": null
     },
     {
@@ -1006,12 +1079,25 @@
       "arguments": {
         "args": [
           [
+            "C09988-K1",
             "11242"
           ]
         ]
       },
-      "result": [],
-      "timestamp": "2026-09-24T22:45:37.390639",
+      "result": [
+        {
+          "case_id": "HHG-016",
+          "outcome": "",
+          "pattern": "",
+          "opened_at": "2016-12-12 01:39:08",
+          "closed_at": "1970-01-01 00:00:00",
+          "exposure_usd": 0,
+          "report_filed": false,
+          "analyst_notes": "",
+          "id": "HHG-016"
+        }
+      ],
+      "timestamp": "2026-09-24T23:12:46.376076",
       "error": null
     },
     {
@@ -1022,14 +1108,14 @@
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T22:45:48.053724",
+      "timestamp": "2026-09-24T23:12:58.746884",
       "error": null
     }
   ],
   "tokens": {
-    "prompt": 2207,
-    "completion": 508,
-    "total": 2715
+    "prompt": 2217,
+    "completion": 334,
+    "total": 2551
   },
-  "latency": 8.255
+  "latency": 10.775
 }
