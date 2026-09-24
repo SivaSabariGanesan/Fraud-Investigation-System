@@ -8,6 +8,17 @@ from app.agent.evidence import EvidenceItem
 
 logger = logging.getLogger(__name__)
 
+class TriggerInfo(BaseModel):
+    """
+    Manually supplied or graph-derived case trigger details.
+    """
+    trigger_type: Optional[str] = None
+    trigger_text: Optional[str] = None
+    transaction_id: Optional[str] = None
+    customer_id: Optional[str] = None
+    amount: Optional[float] = None
+    customer_dispute: bool = False
+
 class DerivedObservations(BaseModel):
     """
     Summary metrics and observable signals derived from raw evidence.
@@ -22,6 +33,7 @@ class DerivedObservations(BaseModel):
     disposable_email_domains_count: int = 0
     connected_closed_cases_count: int = 0
     historical_fraud_cases_count: int = 0
+    customer_dispute: bool = False
     observed_signals_summary: List[str] = Field(default_factory=list)
 
 class ObservedFacts(BaseModel):
@@ -29,6 +41,7 @@ class ObservedFacts(BaseModel):
     Collection of raw entity payloads preserved directly from graph tools.
     """
     case_info: Optional[Dict[str, Any]] = None
+    trigger_info: Optional[TriggerInfo] = None
     transactions: List[Dict[str, Any]] = Field(default_factory=list)
     customer_info: Optional[Dict[str, Any]] = None
     cards_info: List[Dict[str, Any]] = Field(default_factory=list)
@@ -67,18 +80,72 @@ def build_investigation_context(
     Builds a unified InvestigationContext from investigation state, raw entity facts, and normalized evidence items.
     Computes objective derived metrics without making fraud verdicts or applying policy rules.
     """
-    txns = transactions or []
+    txns = [dict(t) for t in (transactions or [])]
     cards = cards_info or []
     devs = devices_info or []
     regions = billing_regions_info or []
     domains = email_domains_info or []
     conn_cases = connected_cases_info or []
     reqs = evidence_requests_info or []
-    evidence_items = normalized_evidence or []
+    evidence_items = list(normalized_evidence or [])
+
+    # Extract manual trigger info from case_info, state, or DB
+    trig_type = (case_info.get("trigger_type") if case_info else None) or "customer_report"
+    trig_text = (case_info.get("trigger_text") if case_info else None) or (case_info.get("notes") if case_info else None)
+    if not trig_text and state.investigation_notes:
+        trig_text = "; ".join(state.investigation_notes)
+
+    target_txn_id = (case_info.get("transaction_id") if case_info else None) or (state.transaction_ids[0] if state.transaction_ids else None)
+    target_cust_id = (case_info.get("customer_id") if case_info else None) or state.customer_id
+    amount = case_info.get("exposure") if case_info else None
+
+    # Detect customer dispute
+    combined_notes = f"{trig_type or ''} {trig_text or ''} {' '.join(state.investigation_notes)}".lower()
+    dispute_keywords = ["customer_report", "never made", "didn't make", "did not make", "dispute", "unauthorized", "stolen", "not me", "fraud", "please investigate"]
+    is_disputed = trig_type == "customer_report" or any(kw in combined_notes for kw in dispute_keywords)
+
+    if is_disputed:
+        for t in txns:
+            t["disputed"] = True
+        # If no transactions in txns, ensure target_txn_id is tracked as disputed
+        if not txns and target_txn_id:
+            txns.append({
+                "id": str(target_txn_id),
+                "transaction_id": str(target_txn_id),
+                "disputed": True,
+                "amount": amount or 0.0
+            })
+
+    trigger_obj = TriggerInfo(
+        trigger_type=trig_type,
+        trigger_text=trig_text,
+        transaction_id=str(target_txn_id) if target_txn_id else None,
+        customer_id=str(target_cust_id) if target_cust_id else None,
+        amount=amount,
+        customer_dispute=is_disputed
+    )
+
+    # Add explicit dispute evidence item if disputed and not already present
+    if is_disputed and not any(e.evidence_type == "CustomerDispute" for e in evidence_items):
+        evidence_items.insert(0, EvidenceItem(
+            evidence_id=f"EV-DISPUTE-{state.case_id}",
+            evidence_type="CustomerDispute",
+            source="CustomerReport",
+            description=f"Customer dispute report ({trig_type}): {trig_text or 'Transaction disputed by customer.'}",
+            strength="HIGH",
+            transaction_id=str(target_txn_id) if target_txn_id else None,
+            raw_data={
+                "trigger_type": trig_type,
+                "trigger_text": trig_text,
+                "disputed": True
+            }
+        ))
 
     # Calculate objective derived observations
-    flagged_txns = [t for t in txns if t.get("status") == "FLAGGED"]
+    flagged_txns = [t for t in txns if t.get("status") == "FLAGGED" or t.get("disputed") is True]
     total_exposure = sum(float(t.get("amount", 0.0)) for t in txns if isinstance(t.get("amount"), (int, float)))
+    if total_exposure == 0.0 and amount:
+        total_exposure = float(amount)
     stolen_cards = [c for c in cards if c.get("stolen_flag") is True]
     vpn_devices = [d for d in devs if d.get("vpn_detected") is True]
     geo_mismatches = [r for r in regions if r.get("mismatch_flag") is True]
@@ -86,8 +153,10 @@ def build_investigation_context(
     fraud_cases = [cc for cc in conn_cases if cc.get("verdict") == "FRAUD_CONFIRMED"]
 
     signals = []
+    if is_disputed:
+        signals.append("Customer dispute report registered: transaction explicitly denied by customer.")
     if flagged_txns:
-        signals.append(f"Observed {len(flagged_txns)} flagged transaction(s).")
+        signals.append(f"Observed {len(flagged_txns)} flagged or disputed transaction(s).")
     if stolen_cards:
         signals.append(f"Observed {len(stolen_cards)} card(s) with stolen_flag=True.")
     if vpn_devices:
@@ -109,11 +178,13 @@ def build_investigation_context(
         disposable_email_domains_count=len(disp_domains),
         connected_closed_cases_count=len(conn_cases),
         historical_fraud_cases_count=len(fraud_cases),
+        customer_dispute=is_disputed,
         observed_signals_summary=signals
     )
 
     facts = ObservedFacts(
         case_info=case_info,
+        trigger_info=trigger_obj,
         transactions=txns,
         customer_info=customer_info,
         cards_info=cards,

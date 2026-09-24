@@ -139,10 +139,22 @@ def analyze_investigation_context(context: InvestigationContext) -> Investigatio
     exposure = derived.total_exposure_amount
 
     # Collect customer disputes and pending evidence requests
+    trig_info = facts.trigger_info
+    trig_summary = ""
+    if trig_info:
+        trig_summary = (
+            f"Trigger Type: {trig_info.trigger_type or 'customer_report'}\n"
+            f"Customer Report / Notes: \"{trig_info.trigger_text or 'Dispute reported.'}\"\n"
+            f"Customer Dispute Active: {'YES' if derived.customer_dispute else 'NO'}"
+        )
+
     customer_disputes = [
-        f"Transaction {t.get('id')} disputed by customer."
+        f"Transaction {t.get('id') or t.get('transaction_id')} disputed by customer report: '{trig_info.trigger_text if trig_info else 'Disputed'}'."
         for t in facts.transactions if t.get("disputed") is True
     ]
+    if not customer_disputes and derived.customer_dispute:
+        customer_disputes = [f"Customer report explicitly disputes transaction: '{trig_info.trigger_text if trig_info else 'Disputed'}'."]
+
     pending_requests = [
         f"EvidenceRequest {er.get('id') or er.get('request_id')} status is '{er.get('status')}'"
         for er in facts.evidence_requests_info
@@ -155,6 +167,7 @@ def analyze_investigation_context(context: InvestigationContext) -> Investigatio
     payload = _build_bounded_context_payload(context)
     user_prompt = format_groq_user_prompt(
         case_id=case_id,
+        manual_trigger_summary=trig_summary or "None",
         observed_facts_summary=f"Transactions: {payload['txns_summary']}\nConnected Entities: {payload['connected_summary']}",
         derived_observations_summary=payload['derived_summary'],
         normalized_evidence_summary=payload['evidence_summary'],

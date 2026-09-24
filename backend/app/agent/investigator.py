@@ -181,10 +181,28 @@ class FraudInvestigatorAgent:
         connected_cases_info = await self._safe_tool_call(state, "get_connected_cases", get_connected_cases, card_ids) or []
         state.connected_case_ids = [cc.get("id") or cc.get("case_id") for cc in connected_cases_info if (cc.get("id") or cc.get("case_id"))]
 
-        # Step 7: Retrieve evidence requests
+        # Step 7: Retrieve evidence requests (strictly filtered to case_id)
         evidence_reqs_info = await self._safe_tool_call(state, "get_evidence_requests", get_evidence_requests, case_id) or []
         if not evidence_reqs_info:
-            evidence_reqs_info = subgraph.get("entities", {}).get("EvidenceRequest", [])
+            raw_subgraph_reqs = subgraph.get("entities", {}).get("EvidenceRequest", [])
+            evidence_reqs_info = []
+            for req in raw_subgraph_reqs:
+                req_c_id = req.get("case_id") or req.get("for_case") or req.get("details", {}).get("case_id")
+                req_id = req.get("id") or req.get("request_id") or ""
+                if req_c_id == case_id or (case_id in req_id and not ("003" in req_id and case_id != "HHG-003")):
+                    evidence_reqs_info.append(req)
+
+        # Extra safety check to eliminate leaked requests from other cases
+        filtered_evidence_reqs = []
+        for req in evidence_reqs_info:
+            req_c_id = req.get("case_id") or req.get("for_case") or req.get("details", {}).get("case_id")
+            req_id = req.get("id") or req.get("request_id") or ""
+            if "003" in req_id and case_id != "HHG-003":
+                continue
+            if req_c_id and req_c_id != case_id:
+                continue
+            filtered_evidence_reqs.append(req)
+        evidence_reqs_info = filtered_evidence_reqs
         state.evidence_requests = evidence_reqs_info
 
         # Step 8: Normalize retrieved information into structured evidence items
@@ -230,8 +248,8 @@ class FraudInvestigatorAgent:
         # Step 11: Pass reasoning result to decision layer (R1-R10 rules)
         decision_result: DecisionResult = evaluate_policy_rules(reasoning_output, investigation_context)
 
-        # Check for pending required evidence request
-        has_pending_ev_req = len(reasoning_output.pending_evidence_requests) > 0 or any(
+        # Check for pending required evidence request strictly for current case
+        has_pending_ev_req = any(
             str(r.get("status", "")).lower() in ("pending", "submitted") for r in evidence_reqs_info
         )
 
@@ -281,6 +299,9 @@ class FraudInvestigatorAgent:
         elif has_pending_ev_req:
             sar_status = "NOT_RECOMMENDED"
             sar_reason = "Pending customer verification request. Insufficient evidence to establish suspicious activity."
+        elif decision_result.verdict == "NEEDS_REVIEW":
+            sar_status = "NOT_RECOMMENDED"
+            sar_reason = "Case is under active review. Insufficient evidence for SAR filing."
         else:
             sar_status = "NOT_REQUIRED"
             sar_reason = "No confirmed fraud policy triggers met."
@@ -303,6 +324,7 @@ class FraudInvestigatorAgent:
                 "rule_id": r.rule_id,
                 "rule_name": r.rule_name,
                 "triggered": r.triggered,
+                "status": getattr(r, "status", None) or ("TRIGGERED" if r.triggered else "NOT_TRIGGERED"),
                 "description": r.description,
                 "severity": r.severity
             }

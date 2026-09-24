@@ -194,6 +194,7 @@ export interface RuleEvaluationItem {
   rule_id: string;
   rule_name?: string;
   triggered: boolean;
+  status?: string;
   reason?: string;
   description?: string;
   severity?: string;

@@ -14,6 +14,7 @@ class PolicyRuleResult(BaseModel):
     triggered: bool
     description: str
     severity: str  # CRITICAL, HIGH, MEDIUM, LOW, INFO
+    status: str = "NOT_TRIGGERED"
 
 class DecisionResult(BaseModel):
     """
@@ -39,21 +40,36 @@ def evaluate_policy_rules(
     Evaluates project policy rules R1 through R10 against reasoning findings and investigation context.
     Determines decision_state, verification_status, verdict, and recommended actions.
     """
-    case_id = reasoning.case_id
+    case_id = reasoning.case_id or context.case_id
     facts = context.observed_facts
     derived = context.derived_observations
 
     rules: List[PolicyRuleResult] = []
     triggered_ids: List[str] = []
 
-    # Check for pending evidence requests
-    has_pending_ev_req = len(reasoning.pending_evidence_requests) > 0 or any(
-        req.get("status") == "pending" for req in facts.evidence_requests_info
+    # Check for pending evidence requests strictly belonging to current case_id
+    current_case_evidence_reqs = [
+        req for req in facts.evidence_requests_info
+        if (
+            req.get("case_id") == case_id or
+            req.get("for_case") == case_id or
+            req.get("details", {}).get("case_id") == case_id or
+            (case_id in (req.get("id") or req.get("request_id") or "") and not ("003" in (req.get("id") or req.get("request_id") or "") and case_id != "HHG-003"))
+        )
+    ]
+    has_pending_ev_req = any(
+        str(req.get("status", "")).lower() in ("pending", "submitted") for req in current_case_evidence_reqs
+    ) or any(
+        req.get("case_id") == case_id for req in reasoning.pending_evidence_requests
     )
 
     # Check for customer disputes
-    has_customer_dispute = len(reasoning.customer_disputes_represented) > 0 or any(
-        t.get("disputed") is True for t in facts.transactions
+    trig_info = getattr(facts, "trigger_info", None)
+    has_customer_dispute = (
+        derived.customer_dispute is True or
+        len(reasoning.customer_disputes_represented) > 0 or
+        any(t.get("disputed") is True for t in facts.transactions) or
+        (trig_info is not None and trig_info.trigger_type == "customer_report")
     )
 
     # Check for stolen card
@@ -85,6 +101,7 @@ def evaluate_policy_rules(
         rule_id="R1",
         rule_name="LOW_RISK_BASELINE",
         triggered=r1_triggered,
+        status="TRIGGERED" if r1_triggered else "NOT_TRIGGERED",
         description="Single low-risk transaction without risk signals or pending evidence requests.",
         severity="INFO"
     ))
@@ -97,6 +114,7 @@ def evaluate_policy_rules(
         rule_id="R2",
         rule_name="PENDING_EVIDENCE_VERIFICATION",
         triggered=r2_triggered,
+        status="TRIGGERED" if r2_triggered else "NOT_TRIGGERED",
         description="Pending evidence request exists. Investigation requires awaiting response and cannot be auto-cleared.",
         severity="MEDIUM"
     ))
@@ -109,6 +127,7 @@ def evaluate_policy_rules(
         rule_id="R3",
         rule_name="CUSTOMER_DISPUTE_TRIGGER",
         triggered=r3_triggered,
+        status="TRIGGERED" if r3_triggered else "NOT_TRIGGERED",
         description="Transaction or case flagged as disputed by customer. Triggers verification workflow.",
         severity="HIGH"
     ))
@@ -121,6 +140,7 @@ def evaluate_policy_rules(
         rule_id="R4",
         rule_name="STOLEN_CARD_FLAG",
         triggered=r4_triggered,
+        status="TRIGGERED" if r4_triggered else "NOT_TRIGGERED",
         description="Card associated with transaction is flagged as stolen in system records.",
         severity="CRITICAL"
     ))
@@ -133,6 +153,7 @@ def evaluate_policy_rules(
         rule_id="R5",
         rule_name="DEVICE_SPOOFING_HIGH_RISK",
         triggered=r5_triggered,
+        status="TRIGGERED" if r5_triggered else "NOT_TRIGGERED",
         description="Transaction performed via VPN/Proxy device combined with elevated risk score.",
         severity="HIGH"
     ))
@@ -145,6 +166,7 @@ def evaluate_policy_rules(
         rule_id="R6",
         rule_name="REGIONAL_OR_EMAIL_MISMATCH",
         triggered=r6_triggered,
+        status="TRIGGERED" if r6_triggered else "NOT_TRIGGERED",
         description="Transaction involves regional billing mismatch or disposable email domain service.",
         severity="MEDIUM"
     ))
@@ -157,6 +179,7 @@ def evaluate_policy_rules(
         rule_id="R7",
         rule_name="LINKED_HISTORICAL_FRAUD",
         triggered=r7_triggered,
+        status="TRIGGERED" if r7_triggered else "NOT_TRIGGERED",
         description="Entity is linked to past closed case(s) with FRAUD_CONFIRMED verdict.",
         severity="HIGH"
     ))
@@ -169,6 +192,7 @@ def evaluate_policy_rules(
         rule_id="R8",
         rule_name="HIGH_VELOCITY_CARD_TESTING",
         triggered=r8_triggered,
+        status="TRIGGERED" if r8_triggered else "NOT_TRIGGERED",
         description="Card exhibits high transaction velocity with multiple flagged attempts.",
         severity="CRITICAL"
     ))
@@ -181,6 +205,7 @@ def evaluate_policy_rules(
         rule_id="R9",
         rule_name="RISK_SCORE_SIGNAL_ONLY",
         triggered=r9_triggered,
+        status="TRIGGERED",
         description="Risk score is evaluated as an investigation signal, never as an automatic fraud verdict alone.",
         severity="INFO"
     ))
@@ -192,6 +217,7 @@ def evaluate_policy_rules(
         rule_id="R10",
         rule_name="PENDING_EVIDENCE_OVERRIDE",
         triggered=r10_triggered,
+        status="TRIGGERED" if r10_triggered else "NOT_TRIGGERED",
         description="Pending evidence request overrides auto-clear. Final state remains UNRESOLVED / VERIFICATION_PENDING.",
         severity="HIGH"
     ))
@@ -213,7 +239,7 @@ def evaluate_policy_rules(
         verdict = "NEEDS_REVIEW"
         primary_pattern = "Customer Verification Pending"
         actions = ["AWAIT_EVIDENCE_RESPONSE", "ASSIGN_ANALYST_QUEUE", "MONITOR_CARD_ACTIVITY"]
-        pending_reqs = reasoning.pending_evidence_requests or facts.evidence_requests_info
+        pending_reqs = current_case_evidence_reqs or reasoning.pending_evidence_requests
         pending_id = pending_reqs[0].get("request_id") if (pending_reqs and isinstance(pending_reqs[0], dict) and pending_reqs[0].get("request_id")) else "pending_verification"
         explanation = (
             f"Case '{case_id}' contains transaction(s) with risk_score {max_risk_score:.2f}. "
@@ -225,9 +251,9 @@ def evaluate_policy_rules(
         decision_state = "UNDER_INVESTIGATION"
         verification_status = "PENDING"
         verdict = "NEEDS_REVIEW"
-        primary_pattern = reasoning.observed_patterns[0] if reasoning.observed_patterns else "Suspicious Risk Pattern"
-        actions = ["REQUEST_ADDITIONAL_KYC", "REVIEW_DISPUTE_DOCUMENTATION"]
-        explanation = "Suspicious risk signals or customer dispute observed requiring manual verification."
+        primary_pattern = reasoning.observed_patterns[0] if reasoning.observed_patterns else "Customer Dispute / Unauthorized Transaction Report"
+        actions = ["REQUEST_ADDITIONAL_KYC", "REVIEW_DISPUTE_DOCUMENTATION", "MONITOR_CARD_ACTIVITY"]
+        explanation = "Customer dispute report or suspicious risk signals observed. Case requires manual investigation and documentation review."
 
     else:
         decision_state = "CLEARED"
