@@ -196,20 +196,21 @@ class TigerGraphService:
     async def fetch_case_subgraph(self, case_id: str) -> Dict[str, Any]:
         """
         Fetch complete connected subgraph evidence for a case from real FraudGraph.
-        Primary path calls installed GSQL query 'hhg003_policy_decision' for HHG cases, or RESTPP traversal.
+        Primary path calls installed GSQL query 'hhg003_policy_decision' ONLY for HHG-003, or RESTPP traversal for other cases.
         """
         if not self.is_configured():
             raise TigerGraphConnectionError("TigerGraph connection settings are incomplete.")
 
-        # Try executing installed GSQL query first if available
-        try:
-            query_result = await self.run_query("hhg003_policy_decision")
-            if query_result and not query_result.get("error") and "results" in query_result:
-                parsed = self._parse_hhg003_query_result(case_id, query_result.get("results", []))
-                if parsed.get("entities", {}).get("ClosedCase"):
-                    return parsed
-        except Exception as e:
-            logger.warning(f"Installed query execution error: {str(e)}")
+        # Execute installed GSQL query ONLY for HHG-003
+        if case_id == "HHG-003":
+            try:
+                query_result = await self.run_query("hhg003_policy_decision")
+                if query_result and not query_result.get("error") and "results" in query_result:
+                    parsed = self._parse_hhg003_query_result(case_id, query_result.get("results", []))
+                    if parsed.get("entities", {}).get("ClosedCase"):
+                        return parsed
+            except Exception as e:
+                logger.warning(f"Installed query execution error: {str(e)}")
 
         # General RESTPP edge/vertex traversal across FraudGraph for any case
         return await self._traverse_case_subgraph_restpp(case_id)

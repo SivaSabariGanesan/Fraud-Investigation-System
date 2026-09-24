@@ -167,7 +167,47 @@ def analyze_investigation_context(context: InvestigationContext) -> Investigatio
     latency = 0.0
 
     api_key = settings.GROQ_API_KEY
-    if api_key:
+    if settings.USE_LOCAL_LLM or settings.LLM_PROVIDER in ("ollama", "local"):
+        api_key = None
+        # Try local Ollama model (e.g. llama3.2:3b running in Docker)
+        try:
+            import httpx
+            start_time = time.time()
+            ollama_url = getattr(settings, "OLLAMA_HOST", "http://localhost:11434/api/chat")
+            ollama_model = getattr(settings, "OLLAMA_MODEL", "llama3.2:3b")
+            
+            res = httpx.post(
+                ollama_url,
+                json={
+                    "model": ollama_model,
+                    "messages": [
+                        {"role": "system", "content": GROQ_INVESTIGATION_SYSTEM_PROMPT},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    "format": "json",
+                    "stream": False
+                },
+                timeout=30.0
+            )
+            latency = round(time.time() - start_time, 3)
+            if res.status_code == 200:
+                raw_content = res.json().get("message", {}).get("content", "")
+                if raw_content:
+                    parsed_json = json.loads(raw_content)
+                    llm_output = GroqLLMReasoningSchema.model_validate(parsed_json)
+                    llm_model = f"ollama/{ollama_model}"
+                    eval_count = res.json().get("eval_count", 0)
+                    prompt_eval_count = res.json().get("prompt_eval_count", 0)
+                    llm_tokens = {
+                        "prompt": prompt_eval_count,
+                        "completion": eval_count,
+                        "total": prompt_eval_count + eval_count
+                    }
+        except Exception as e:
+            logger.warning(f"Ollama local LLM reasoning execution error: {str(e)}")
+            llm_output = None
+
+    if api_key and not llm_output:
         try:
             from groq import Groq
             client = Groq(api_key=api_key)

@@ -419,20 +419,25 @@ def sync_tigergraph_requests(
     Ensures TigerGraph EvidenceRequest vertices (e.g., ER-HHG-003-001) have a
     corresponding SQLite row so they participate in the lifecycle workflow.
 
-    Idempotency rules:
-    - If a row exists with the CORRECT case_id → skip (never overwrite lifecycle state).
-    - If a row exists with the WRONG case_id → correct the case_id so the request
-      is queryable by the right case. This can happen when a test run accidentally
-      seeds a TigerGraph request under a test case_id.
-    - If no row exists → insert a new PENDING row.
-
-    This guarantees HHG-003 / ER-HHG-003-001 remains PENDING even after
-    multiple investigation runs, and is always returned by
-    GET /api/evidence-requests/HHG-003.
+    Immutability & Idempotency rules:
+    - EvidenceRequest.case_id is strictly IMMUTABLE.
+    - If a row already exists for request_id → skip (never rewrite case_id or lifecycle state).
+    - If a request specifies a case_id that differs from current case_id → ignore/discard.
+    - If no row exists → insert a new PENDING row for current case_id.
     """
     for req in tg_requests:
         req_id = req.get("id") or req.get("request_id")
         if not req_id:
+            continue
+
+        # Check for case_id mismatch in the incoming payload
+        req_c_id = req.get("case_id") or req.get("for_case") or (req.get("details", {}).get("case_id") if isinstance(req.get("details"), dict) else None)
+        if req_c_id and req_c_id != case_id:
+            logger.warning("sync_tigergraph_requests: ignoring request %s belonging to case %s during investigation of case %s", req_id, req_c_id, case_id)
+            continue
+
+        if "003" in str(req_id) and case_id != "HHG-003":
+            logger.warning("sync_tigergraph_requests: ignoring ER-HHG-003 request %s for case %s", req_id, case_id)
             continue
 
         existing = db.query(EvidenceRequestModel).filter(
@@ -440,21 +445,7 @@ def sync_tigergraph_requests(
         ).first()
 
         if existing:
-            if existing.case_id != case_id:
-                # Correct a misassigned case_id (e.g. from a test run cross-contamination)
-                # Only fix case_id — never touch status, response, or any lifecycle field.
-                logger.warning(
-                    "sync_tigergraph_requests: correcting case_id for %s from %r to %r",
-                    req_id, existing.case_id, case_id,
-                )
-                existing.case_id = case_id
-                existing.updated_at = datetime.utcnow()
-                try:
-                    db.commit()
-                except Exception as exc:
-                    db.rollback()
-                    logger.warning("sync case_id correction commit failed for %s: %s", req_id, exc)
-            # Either already correct, or just corrected — do not overwrite lifecycle fields
+            # Case ID is strictly immutable - never modify case_id or lifecycle fields of an existing request
             continue
 
         now = datetime.utcnow()
@@ -465,7 +456,7 @@ def sync_tigergraph_requests(
             request_type=req.get("type") or req.get("request_type") or "customer_verification",
             request_text=(
                 req.get("request_text")
-                or req.get("details", {}).get("request_text")
+                or (req.get("details", {}).get("request_text") if isinstance(req.get("details"), dict) else None)
                 or "Please confirm this transaction."
             ),
             status="PENDING",  # TigerGraph requests start as PENDING in our lifecycle

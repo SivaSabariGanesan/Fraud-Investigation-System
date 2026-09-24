@@ -77,7 +77,11 @@ class FraudInvestigatorAgent:
         state.card_ids = card_ids
 
         # Retrieve subgraph entities first for quick entity resolution
-        subgraph = await tigergraph_service.fetch_case_subgraph(case_id)
+        try:
+            subgraph = await tigergraph_service.fetch_case_subgraph(case_id)
+        except Exception as e:
+            logger.warning(f"Subgraph fetch failed for case '{case_id}': {str(e)}")
+            subgraph = {"entities": {}, "relationships": []}
 
         # Step 3: Retrieve associated card & customer information
         cards_info = subgraph.get("entities", {}).get("Card", [])

@@ -283,14 +283,27 @@ async def get_connected_cases(card_ids: List[str]) -> List[Dict[str, Any]]:
 async def get_evidence_requests(case_id: str) -> List[Dict[str, Any]]:
     """
     12. Retrieve evidence requests submitted for a case.
+    Strictly filters returned requests so that only requests belonging to case_id are returned.
     """
     if not case_id:
         return []
 
     subgraph = await tigergraph_service.fetch_case_subgraph(case_id)
     evidence_reqs = subgraph.get("entities", {}).get("EvidenceRequest", [])
+    
+    filtered_reqs = []
     if evidence_reqs:
-        return evidence_reqs
+        for req in evidence_reqs:
+            req_c_id = req.get("case_id") or req.get("for_case") or req.get("details", {}).get("case_id")
+            # If request ID explicitly contains case reference (e.g. ER-HHG-003-001)
+            req_id = req.get("id") or req.get("request_id") or ""
+            if "003" in req_id and case_id != "HHG-003":
+                continue
+            if req_c_id and req_c_id != case_id:
+                continue
+            filtered_reqs.append(req)
+        if filtered_reqs:
+            return filtered_reqs
 
     # Edge lookup fallback
     edges = await tigergraph_service.get_edges("ClosedCase", case_id, "reverse_FOR_CASE")
@@ -298,8 +311,13 @@ async def get_evidence_requests(case_id: str) -> List[Dict[str, Any]]:
     for edge in edges:
         req_id = edge.get("to_id")
         if req_id:
+            if "003" in req_id and case_id != "HHG-003":
+                continue
             req_v = await tigergraph_service.get_vertex("EvidenceRequest", req_id)
             if req_v:
+                v_c_id = req_v.get("case_id") or req_v.get("for_case")
+                if v_c_id and v_c_id != case_id:
+                    continue
                 reqs.append(req_v)
 
     return reqs

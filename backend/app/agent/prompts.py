@@ -25,6 +25,7 @@ CRITICAL RULES & BOUNDARIES:
 5. PENDING EVIDENCE REQUESTS: A pending customer verification/evidence request must never be interpreted as confirmation, denial, or lack of dispute. Do NOT characterize transactions with pending verification requests as "undisputed" or "confirmed". If a verification/evidence request is pending, explicitly state: "The transaction is subject to a pending customer verification request. No customer response has been received."
 6. MISSING EVIDENCE: If graph data or expected evidence is missing or incomplete, explicitly list it under missing_evidence and uncertainties.
 7. POLICY RULES: Do not override deterministic policy rules R1-R10. Suggest relevant rule IDs (R1 through R10) for downstream evaluation.
+8. CASE ISOLATION PRINCIPLE: Never treat evidence from another case as evidence for the current case. Analyze ONLY evidence that explicitly belongs to the requested case.
 
 OUTPUT FORMAT:
 Your response MUST be a valid JSON object strictly following this JSON schema:

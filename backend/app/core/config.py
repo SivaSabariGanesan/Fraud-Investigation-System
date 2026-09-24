@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     
     # AI / LLM Configuration
     LLM_PROVIDER: str = "groq"
+    USE_LOCAL_LLM: bool = False
+    OLLAMA_HOST: str = "http://localhost:11434/api/chat"
+    OLLAMA_MODEL: str = "llama3.2:3b"
     GROQ_API_KEY: Optional[str] = None
     GROQ_MODEL: str = "openai/gpt-oss-120b"
     OPENAI_API_KEY: Optional[str] = None
