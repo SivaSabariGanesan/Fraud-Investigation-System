@@ -537,24 +537,24 @@ const FraudGraphCanvas: React.FC<FraudGraphProps> = ({ caseId, onSelectTransacti
 
         {/* Selected Node Details Docked Side Panel */}
         {selectedNode && (
-          <div className="absolute right-3 top-3 bottom-3 w-72 bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-slate-200 dark:border-slate-800 rounded-lg shadow-lg p-3.5 overflow-y-auto z-20 flex flex-col text-xs">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800 mb-3">
+          <div className="absolute right-3 top-3 bottom-3 w-80 bg-slate-900/95 text-slate-100 backdrop-blur border border-slate-800 rounded-lg shadow-xl p-3.5 overflow-y-auto z-20 flex flex-col text-xs">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800 mb-3">
               <div className="flex items-center gap-2">
                 {React.createElement(ENTITY_CONFIG[selectedNode.type]?.icon || Info, {
-                  className: `w-4 h-4 ${ENTITY_CONFIG[selectedNode.type]?.badgeText || 'text-slate-600'}`,
+                  className: `w-4 h-4 ${ENTITY_CONFIG[selectedNode.type]?.badgeText || 'text-slate-400'}`,
                 })}
                 <div>
-                  <h4 className="font-mono font-semibold text-slate-900 dark:text-slate-100 text-xs">
+                  <h4 className="font-mono font-semibold text-slate-100 text-xs">
                     {selectedNode.label}
                   </h4>
-                  <span className="text-[10px] text-slate-500 font-sans uppercase tracking-wider block">
+                  <span className="text-[10px] text-slate-400 font-sans uppercase tracking-wider block">
                     {ENTITY_CONFIG[selectedNode.type]?.label || selectedNode.type}
                   </span>
                 </div>
               </div>
               <button
                 onClick={() => setSelectedNode(null)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded transition"
+                className="p-1 text-slate-400 hover:text-slate-200 rounded transition"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -577,15 +577,15 @@ const FraudGraphCanvas: React.FC<FraudGraphProps> = ({ caseId, onSelectTransacti
                 }
 
                 return (
-                  <div key={key} className="bg-slate-50 dark:bg-slate-850 p-2 rounded border border-slate-100 dark:border-slate-800">
-                    <span className="text-[9px] font-mono font-semibold text-slate-400 block mb-0.5">{label}</span>
-                    <span className="font-mono text-xs text-slate-800 dark:text-slate-200 break-words">{displayVal}</span>
+                  <div key={key} className="bg-slate-800/90 p-2.5 rounded border border-slate-700/80">
+                    <span className="text-[9px] font-mono font-semibold text-slate-400 block mb-1 tracking-wider">{label}</span>
+                    <span className="font-mono text-xs font-medium text-slate-100 break-words">{displayVal}</span>
                   </div>
                 );
               })}
 
               {/* Directly Connected Nodes */}
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 mt-3">
+              <div className="pt-2 border-t border-slate-800 mt-3">
                 <span className="text-[9px] font-mono font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">
                   Topology Connections
                 </span>
@@ -599,10 +599,10 @@ const FraudGraphCanvas: React.FC<FraudGraphProps> = ({ caseId, onSelectTransacti
                         <div
                           key={e.id}
                           onClick={() => otherNode && setSelectedNode(otherNode)}
-                          className="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-850 dark:hover:bg-slate-800 rounded border border-slate-100 dark:border-slate-800 cursor-pointer flex items-center justify-between text-[11px] transition"
+                          className="p-2 bg-slate-800/80 hover:bg-slate-700/80 rounded border border-slate-700/80 cursor-pointer flex items-center justify-between text-[11px] transition"
                         >
-                          <span className="font-mono text-[10px] text-blue-600 font-semibold">{e.type}</span>
-                          <span className="font-mono text-slate-700 dark:text-slate-300 truncate max-w-[120px]">
+                          <span className="font-mono text-[10px] text-blue-400 font-semibold">{e.type}</span>
+                          <span className="font-mono text-slate-200 truncate max-w-[140px]">
                             {otherNode?.label || otherId}
                           </span>
                         </div>

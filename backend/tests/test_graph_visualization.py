@@ -132,3 +132,84 @@ def test_11_malformed_historical_transactions_excluded():
         amount = props.get("amount")
         assert amount is not None and amount > 0, f"Malformed transaction included with non-positive amount: {amount}"
         assert props.get("transaction_id"), "Transaction missing transaction_id!"
+
+
+def test_manual_case_graph_anchors_to_real_transaction():
+    """Verify manual case DEMO-001 graph anchors to real TigerGraph transaction 3530164."""
+    # Ensure DEMO-001 is created first
+    client.post("/api/cases/manual", json={
+        "case_id": "DEMO-001",
+        "customer_id": "C08623",
+        "transaction_id": "3530164",
+        "amount": 49.00,
+        "trigger_type": "customer_report",
+        "trigger_text": "I never made this purchase."
+    })
+    response = client.get("/api/cases/DEMO-001/graph")
+    assert response.status_code == 200
+    data = response.json()
+    node_ids = [n["id"] for n in data["nodes"]]
+    assert any("3530164" in nid for nid in node_ids)
+
+
+def test_manual_case_graph_does_not_create_fake_entities():
+    """Verify manual case graph contains only real TigerGraph entity types."""
+    response = client.get("/api/cases/DEMO-001/graph")
+    assert response.status_code == 200
+    data = response.json()
+    valid_types = {
+        "Customer", "Card", "Transaction", "DeviceProfile",
+        "EmailDomain", "BillingRegion", "ClosedCase", "EvidenceRequest"
+    }
+    for node in data["nodes"]:
+        assert node["type"] in valid_types, f"Fake/invalid node type found: {node['type']}"
+
+
+def test_manual_case_graph_is_case_scoped():
+    """Verify manual case graph does NOT include unrelated cases or evidence requests from HHG-003."""
+    response = client.get("/api/cases/DEMO-001/graph")
+    assert response.status_code == 200
+    data = response.json()
+    node_ids = [n["id"] for n in data["nodes"]]
+    assert not any("HHG-003" in nid for nid in node_ids if "ClosedCase" in nid)
+    assert not any("ER-HHG-003-001" in nid for nid in node_ids)
+
+
+def test_demo001_graph_contains_transaction_3530164():
+    """Verify DEMO-001 graph explicitly includes Transaction 3530164."""
+    response = client.get("/api/cases/DEMO-001/graph")
+    assert response.status_code == 200
+    data = response.json()
+    txn_node = next((n for n in data["nodes"] if "3530164" in n["id"]), None)
+    assert txn_node is not None
+    assert txn_node["properties"].get("transaction_id") == "3530164"
+
+
+def test_demo001_graph_contains_customer_c08623_when_reachable():
+    """Verify DEMO-001 graph includes reachable Customer C08623."""
+    response = client.get("/api/cases/DEMO-001/graph")
+    assert response.status_code == 200
+    data = response.json()
+    cust_node = next((n for n in data["nodes"] if "C08623" in n["id"]), None)
+    assert cust_node is not None
+    assert cust_node["properties"].get("customer_id") == "C08623"
+
+
+def test_demo001_graph_contains_card_19739_when_reachable():
+    """Verify DEMO-001 graph includes reachable Card 19739."""
+    response = client.get("/api/cases/DEMO-001/graph")
+    assert response.status_code == 200
+    data = response.json()
+    card_node = next((n for n in data["nodes"] if "19739" in n["id"]), None)
+    assert card_node is not None
+    assert card_node["properties"].get("card_id") == "19739"
+
+
+def test_hhg003_graph_regression():
+    """Verify HHG-003 graph continues to render nodes and edges properly."""
+    response = client.get("/api/cases/HHG-003/graph")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["nodes"]) >= 4
+    assert len(data["edges"]) >= 4
+
