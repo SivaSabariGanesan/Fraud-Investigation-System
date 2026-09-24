@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Case } from '../types/investigation';
 import { StatusBadge } from '../components/StatusBadge';
 import { formatCurrency } from '../lib/utils';
-import { Search, RefreshCw, ArrowRight, AlertCircle, SlidersHorizontal } from 'lucide-react';
+import { Search, RefreshCw, ArrowRight, AlertCircle, SlidersHorizontal, Plus } from 'lucide-react';
 
 interface CasesProps {
   cases: Case[];
@@ -10,6 +10,7 @@ interface CasesProps {
   error?: string | null;
   onRefresh: () => void;
   onSelectCase: (caseId: string) => void;
+  onNewInvestigation?: () => void;
 }
 
 export const Cases: React.FC<CasesProps> = ({
@@ -18,6 +19,7 @@ export const Cases: React.FC<CasesProps> = ({
   error,
   onRefresh,
   onSelectCase,
+  onNewInvestigation,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -66,10 +68,18 @@ export const Cases: React.FC<CasesProps> = ({
             {filtered.length} of {cases.length} cases shown
           </p>
         </div>
-        <button className="btn btn-ghost" onClick={onRefresh} disabled={loading}>
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button className="btn btn-ghost" onClick={onRefresh} disabled={loading}>
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+          {onNewInvestigation && (
+            <button className="btn btn-primary" onClick={onNewInvestigation}>
+              <Plus className="w-3.5 h-3.5" />
+              New Investigation
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Error */}

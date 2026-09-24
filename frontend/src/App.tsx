@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
+import { CreateInvestigationModal } from './components/CreateInvestigationModal';
 import { Dashboard } from './pages/Dashboard';
 import { Cases } from './pages/Cases';
 import { CaseDetails } from './pages/CaseDetails';
@@ -13,6 +14,7 @@ export function App() {
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
 
   // Sync state with URL path
   const syncRouteWithState = () => {
@@ -97,6 +99,7 @@ export function App() {
                 error={error}
                 onRefresh={loadCases}
                 onSelectCase={navigateToCaseDetails}
+                onNewInvestigation={() => setIsCreateModalOpen(true)}
               />
             )}
 
@@ -107,6 +110,7 @@ export function App() {
                 error={error}
                 onRefresh={loadCases}
                 onSelectCase={navigateToCaseDetails}
+                onNewInvestigation={() => setIsCreateModalOpen(true)}
               />
             )}
 
@@ -120,6 +124,15 @@ export function App() {
           </div>
         </main>
       </div>
+
+      <CreateInvestigationModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={(newCaseId) => {
+          loadCases();
+          navigateToCaseDetails(newCaseId);
+        }}
+      />
     </div>
   );
 }

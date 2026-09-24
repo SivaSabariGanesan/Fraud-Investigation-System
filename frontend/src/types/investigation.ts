@@ -23,6 +23,18 @@ export interface Case {
   updated_at: string;
   notes?: string | null;
   customer_id?: string | null;
+  transaction_id?: string | null;
+  trigger_type?: string | null;
+  trigger_text?: string | null;
+}
+
+export interface ManualCaseCreatePayload {
+  case_id: string;
+  customer_id?: string;
+  transaction_id: string;
+  amount?: number;
+  trigger_type: string;
+  trigger_text: string;
 }
 
 export interface EvidenceItem {

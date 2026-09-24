@@ -26,64 +26,83 @@ interface SarWorkflowPanelProps {
 
 const SAR_STATUS_CONFIG: Record<
   SarStatus,
-  { label: string; bg: string; text: string; border: string; icon: React.FC<{ className?: string }> }
+  { label: string; bg: string; text: string; border: string; icon: React.FC<{ className?: string; style?: React.CSSProperties }> }
 > = {
   NOT_RECOMMENDED: {
     label: 'NOT RECOMMENDED',
-    bg: 'bg-slate-100 dark:bg-slate-800/80',
-    text: 'text-slate-700 dark:text-slate-300',
-    border: 'border-slate-300 dark:border-slate-700',
+    bg: 'var(--bg-overlay)',
+    text: 'var(--text-secondary)',
+    border: 'var(--border-default)',
     icon: Info,
   },
   CANDIDATE: {
     label: 'SAR CANDIDATE',
-    bg: 'bg-amber-50 dark:bg-amber-950/60',
-    text: 'text-amber-800 dark:text-amber-200',
-    border: 'border-amber-300 dark:border-amber-700',
+    bg: 'var(--warn-subtle)',
+    text: 'var(--warn-text)',
+    border: 'var(--warn-border)',
     icon: AlertTriangle,
   },
   UNDER_REVIEW: {
     label: 'UNDER REVIEW',
-    bg: 'bg-blue-50 dark:bg-blue-950/60',
-    text: 'text-blue-800 dark:text-blue-200',
-    border: 'border-blue-300 dark:border-blue-700',
+    bg: 'var(--accent-subtle)',
+    text: 'var(--accent-text)',
+    border: 'var(--accent-border)',
     icon: Clock,
   },
   APPROVED: {
     label: 'APPROVED FOR FILING',
-    bg: 'bg-emerald-50 dark:bg-emerald-950/60',
-    text: 'text-emerald-800 dark:text-emerald-200',
-    border: 'border-emerald-300 dark:border-emerald-700',
+    bg: 'var(--success-subtle)',
+    text: 'var(--success-text)',
+    border: 'var(--success-border)',
     icon: CheckCircle2,
   },
   NOT_FILED: {
     label: 'DECISION: DO NOT FILE',
-    bg: 'bg-rose-50 dark:bg-rose-950/60',
-    text: 'text-rose-800 dark:text-rose-200',
-    border: 'border-rose-300 dark:border-rose-700',
+    bg: 'var(--danger-subtle)',
+    text: 'var(--danger-text)',
+    border: 'var(--danger-border)',
     icon: XCircle,
   },
   PREPARED: {
     label: 'REPORT PREPARED',
-    bg: 'bg-purple-50 dark:bg-purple-950/60',
-    text: 'text-purple-800 dark:text-purple-200',
-    border: 'border-purple-300 dark:border-purple-700',
+    bg: 'rgba(124, 58, 237, 0.08)',
+    text: '#7c3aed',
+    border: 'rgba(124, 58, 237, 0.25)',
     icon: FileCheck,
   },
   SUBMISSION_PENDING: {
     label: 'SUBMISSION PENDING',
-    bg: 'bg-indigo-50 dark:bg-indigo-950/60',
-    text: 'text-indigo-800 dark:text-indigo-200',
-    border: 'border-indigo-300 dark:border-indigo-700',
+    bg: 'var(--warn-subtle)',
+    text: 'var(--warn-text)',
+    border: 'var(--warn-border)',
     icon: Send,
   },
   FILED: {
     label: 'FILED',
-    bg: 'bg-emerald-100 dark:bg-emerald-900',
-    text: 'text-emerald-900 dark:text-emerald-100',
-    border: 'border-emerald-400',
+    bg: 'var(--success-subtle)',
+    text: 'var(--success-text)',
+    border: 'var(--success-border)',
     icon: CheckCircle2,
   },
+};
+
+const boxStyle: React.CSSProperties = {
+  padding: '10px 12px',
+  background: 'var(--bg-raised)',
+  border: '1px solid var(--border-default)',
+  borderRadius: 5,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 4,
+};
+
+const boxLabelStyle: React.CSSProperties = {
+  fontSize: 10,
+  fontFamily: 'monospace',
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  color: 'var(--text-muted)',
+  letterSpacing: '0.07em',
 };
 
 export const SarWorkflowPanel: React.FC<SarWorkflowPanelProps> = ({ caseId, onSarUpdated }) => {
@@ -176,8 +195,8 @@ export const SarWorkflowPanel: React.FC<SarWorkflowPanelProps> = ({ caseId, onSa
 
   if (loading) {
     return (
-      <div className="card p-6 flex flex-col items-center justify-center gap-2 text-slate-500 font-mono text-xs">
-        <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
+      <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, color: 'var(--text-muted)', fontFamily: 'monospace', fontSize: 12 }}>
+        <RefreshCw className="w-4 h-4 animate-spin" style={{ color: 'var(--accent-text)' }} />
         <span>Loading SAR Workflow Record…</span>
       </div>
     );
@@ -185,20 +204,20 @@ export const SarWorkflowPanel: React.FC<SarWorkflowPanelProps> = ({ caseId, onSa
 
   if (error) {
     return (
-      <div className="card p-4 border-red-200 bg-red-50/50 dark:bg-red-950/20 text-xs">
-        <div className="flex items-center gap-2 text-red-800 dark:text-red-300 font-semibold mb-1">
-          <ShieldAlert className="w-4 h-4 text-red-600" />
+      <div style={{ padding: '12px 14px', background: 'var(--danger-subtle)', border: '1px solid var(--danger-border)', borderRadius: 6, fontSize: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--danger-text)', fontWeight: 600, marginBottom: 4 }}>
+          <ShieldAlert className="w-4 h-4" />
           <span>SAR Workflow Error</span>
         </div>
-        <p className="text-red-600 dark:text-red-400">{error}</p>
+        <p style={{ margin: 0, color: 'var(--danger-text)' }}>{error}</p>
       </div>
     );
   }
 
   if (!sarRecord) {
     return (
-      <div className="card p-6 text-center text-xs text-slate-500 font-mono">
-        No SAR evaluation available for case <span className="font-semibold text-slate-700">{caseId}</span>. Run an investigation to trigger deterministic policy evaluation.
+      <div className="card" style={{ padding: 20, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+        No SAR evaluation available for case <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{caseId}</span>. Run an investigation to trigger deterministic policy evaluation.
       </div>
     );
   }
@@ -207,24 +226,24 @@ export const SarWorkflowPanel: React.FC<SarWorkflowPanelProps> = ({ caseId, onSa
   const StatusIcon = statusCfg.icon;
 
   return (
-    <div className="card p-4 space-y-4 text-xs font-sans">
+    <div className="card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* Top Header & Status Badge */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
-        <div className="flex items-center gap-2">
-          <FileText className="w-4 h-4 text-blue-600" />
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingBottom: 12, borderBottom: '1px solid var(--border-default)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <FileText className="w-4 h-4" style={{ color: 'var(--accent-text)' }} />
           <div>
-            <h3 className="font-mono font-bold text-slate-900 dark:text-slate-100 text-sm tracking-tight">
+            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, fontFamily: 'monospace', color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
               SUSPICIOUS ACTIVITY REPORT (SAR) WORKFLOW
             </h3>
-            <div className="flex items-center gap-2 font-mono text-[11px] text-slate-500 mt-0.5">
-              <span>SAR ID: <strong className="text-slate-800 dark:text-slate-200">{sarRecord.sar_id}</strong></span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, fontFamily: 'monospace', color: 'var(--text-muted)', marginTop: 2 }}>
+              <span>SAR ID: <strong style={{ color: 'var(--text-primary)' }}>{sarRecord.sar_id}</strong></span>
               <span>·</span>
-              <span>Inv ID: <strong className="text-slate-800 dark:text-slate-200">{sarRecord.investigation_id}</strong></span>
+              <span>Inv ID: <strong style={{ color: 'var(--text-primary)' }}>{sarRecord.investigation_id}</strong></span>
             </div>
           </div>
         </div>
 
-        <div className={`px-2.5 py-1 rounded border flex items-center gap-1.5 font-mono text-xs font-bold ${statusCfg.bg} ${statusCfg.text} ${statusCfg.border}`}>
+        <div className="pill" style={{ background: statusCfg.bg, color: statusCfg.text, borderColor: statusCfg.border, fontWeight: 700 }}>
           <StatusIcon className="w-3.5 h-3.5" />
           <span>{statusCfg.label}</span>
         </div>
@@ -232,91 +251,97 @@ export const SarWorkflowPanel: React.FC<SarWorkflowPanelProps> = ({ caseId, onSa
 
       {/* Action Error Alert */}
       {actionError && (
-        <div className="p-2.5 rounded bg-red-50 border border-red-200 text-red-700 text-xs flex items-center justify-between">
+        <div style={{ padding: '8px 12px', borderRadius: 5, background: 'var(--danger-subtle)', border: '1px solid var(--danger-border)', color: 'var(--danger-text)', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span>{actionError}</span>
-          <button onClick={() => setActionError(null)} className="text-slate-400 hover:text-slate-600">✕</button>
+          <button onClick={() => setActionError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
         </div>
       )}
 
       {/* Eligibility & Summary Strip */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="p-3 rounded bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-          <span className="text-[10px] font-mono font-semibold uppercase text-slate-400">Deterministic Eligibility</span>
-          <div className="flex items-center gap-1.5 font-mono font-bold text-xs">
-            <span className={sarRecord.eligibility === 'ELIGIBLE' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400'}>
-              {sarRecord.eligibility}
-            </span>
-          </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+        <div style={boxStyle}>
+          <span style={boxLabelStyle}>Deterministic Eligibility</span>
+          <span style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 700, color: sarRecord.eligibility === 'ELIGIBLE' ? 'var(--success-text)' : 'var(--text-primary)' }}>
+            {sarRecord.eligibility}
+          </span>
         </div>
 
-        <div className="p-3 rounded bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-          <span className="text-[10px] font-mono font-semibold uppercase text-slate-400">Financial Exposure</span>
-          <p className="font-mono font-bold text-xs text-slate-900 dark:text-slate-100">
+        <div style={boxStyle}>
+          <span style={boxLabelStyle}>Financial Exposure</span>
+          <span style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-primary)' }}>
             {formatCurrency(sarRecord.exposure_usd || 0)}
-          </p>
+          </span>
         </div>
 
-        <div className="p-3 rounded bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-          <span className="text-[10px] font-mono font-semibold uppercase text-slate-400">Timestamps</span>
-          <p className="font-mono text-[11px] text-slate-600 dark:text-slate-400">
+        <div style={boxStyle}>
+          <span style={boxLabelStyle}>Timestamps</span>
+          <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--text-secondary)' }}>
             Created: {formatDate(sarRecord.created_at)}
-          </p>
+          </span>
         </div>
       </div>
 
       {/* Reason Box */}
-      <div className="p-3 rounded bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-        <span className="text-[10px] font-mono font-semibold uppercase text-slate-400">Policy Eligibility Rationale</span>
-        <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+      <div style={boxStyle}>
+        <span style={boxLabelStyle}>Policy Eligibility Rationale</span>
+        <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
           {sarRecord.eligibility_reason || 'No detailed policy rationale recorded.'}
         </p>
       </div>
 
       {/* Grounded Evidence Breakdown Toggle */}
-      <div className="border-t border-slate-200 dark:border-slate-800 pt-3">
+      <div style={{ paddingTop: 6, borderTop: '1px solid var(--border-default)' }}>
         <button
           onClick={() => setShowEvidenceDetails(!showEvidenceDetails)}
-          className="flex items-center justify-between w-full text-xs font-mono font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 0,
+            fontSize: 11,
+            fontFamily: 'monospace',
+            fontWeight: 600,
+            color: 'var(--text-muted)',
+          }}
         >
           <span>GROUNDED EVIDENCE & ENTITIES ({sarRecord.supporting_evidence?.length || 0} items)</span>
           {showEvidenceDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
 
         {showEvidenceDetails && (
-          <div className="mt-3 space-y-3">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
             {/* Involved Entities */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono">
-              <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800">
-                <span className="text-[9px] text-slate-400 block">TRANSACTIONS</span>
-                <span className="text-slate-800 dark:text-slate-200">{sarRecord.related_transaction_ids?.join(', ') || 'None'}</span>
-              </div>
-              <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800">
-                <span className="text-[9px] text-slate-400 block">CARDS</span>
-                <span className="text-slate-800 dark:text-slate-200">{sarRecord.related_card_ids?.join(', ') || 'None'}</span>
-              </div>
-              <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800">
-                <span className="text-[9px] text-slate-400 block">DEVICES</span>
-                <span className="text-slate-800 dark:text-slate-200">{sarRecord.related_device_ids?.join(', ') || 'None'}</span>
-              </div>
-              <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800">
-                <span className="text-[9px] text-slate-400 block">REGIONS</span>
-                <span className="text-slate-800 dark:text-slate-200">{sarRecord.related_regions?.join(', ') || 'None'}</span>
-              </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+              {[
+                ['TRANSACTIONS', sarRecord.related_transaction_ids?.join(', ') || 'None'],
+                ['CARDS', sarRecord.related_card_ids?.join(', ') || 'None'],
+                ['DEVICES', sarRecord.related_device_ids?.join(', ') || 'None'],
+                ['REGIONS', sarRecord.related_regions?.join(', ') || 'None'],
+              ].map(([lbl, val]) => (
+                <div key={lbl} style={{ padding: '7px 9px', background: 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: 4 }}>
+                  <span style={{ fontSize: 9, fontFamily: 'monospace', color: 'var(--text-muted)', display: 'block', marginBottom: 2 }}>{lbl}</span>
+                  <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--text-primary)' }}>{val}</span>
+                </div>
+              ))}
             </div>
 
             {/* Policy Rules */}
             {sarRecord.policy_rules && sarRecord.policy_rules.length > 0 && (
-              <div className="space-y-1">
-                <span className="text-[10px] font-mono font-semibold text-slate-400 uppercase">Evaluated Policy Rules</span>
-                <div className="flex flex-wrap gap-1.5">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={boxLabelStyle}>Evaluated Policy Rules</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {sarRecord.policy_rules.map((r, i) => (
                     <span
                       key={i}
-                      className={`px-2 py-0.5 rounded text-[10px] font-mono border ${
-                        r.triggered
-                          ? 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-200'
-                          : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400'
-                      }`}
+                      className="pill"
+                      style={r.triggered
+                        ? { background: 'var(--warn-subtle)', color: 'var(--warn-text)', borderColor: 'var(--warn-border)', fontSize: 10 }
+                        : { background: 'var(--bg-overlay)', color: 'var(--text-muted)', borderColor: 'var(--border-default)', fontSize: 10 }
+                      }
                     >
                       {r.rule_id}: {r.triggered ? 'TRIGGERED' : 'PASSED'}
                     </span>
@@ -332,18 +357,18 @@ export const SarWorkflowPanel: React.FC<SarWorkflowPanelProps> = ({ caseId, onSa
 
       {/* 1. CANDIDATE / UNDER_REVIEW Action Box */}
       {(sarRecord.status === 'CANDIDATE' || sarRecord.status === 'UNDER_REVIEW') && (
-        <div className="p-4 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 space-y-3">
-          <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-mono font-bold text-xs">
-            <AlertTriangle className="w-4 h-4 text-amber-600" />
+        <div style={{ padding: 14, borderRadius: 6, background: 'var(--warn-subtle)', border: '1px solid var(--warn-border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--warn-text)', fontFamily: 'monospace', fontWeight: 700, fontSize: 12 }}>
+            <AlertTriangle className="w-4 h-4" />
             <span>ANALYST SAR REVIEW ACTION REQUIRED</span>
           </div>
 
-          <p className="text-xs text-slate-600 dark:text-slate-300">
+          <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
             This investigation is flagged as an eligible SAR candidate. Review the evidence and record your decision below.
           </p>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-mono font-semibold text-slate-500 uppercase block">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={boxLabelStyle}>
               Analyst Review Notes (Required for Do Not File)
             </label>
             <textarea
@@ -351,15 +376,17 @@ export const SarWorkflowPanel: React.FC<SarWorkflowPanelProps> = ({ caseId, onSa
               placeholder="Enter compliance review justification..."
               value={analystNotes}
               onChange={(e) => setAnalystNotes(e.target.value)}
-              className="input-base w-full p-2"
+              className="input-base"
+              style={{ width: '100%', padding: '6px 10px', resize: 'vertical' }}
             />
           </div>
 
-          <div className="flex items-center gap-2 pt-1">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 4 }}>
             <button
               onClick={() => handleReview('approve')}
               disabled={submitting}
-              className="btn btn-primary bg-emerald-600 hover:bg-emerald-700 border-emerald-700 text-white"
+              className="btn btn-primary"
+              style={{ background: 'var(--success)', borderColor: 'var(--success-text)' }}
             >
               {submitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
               Approve for SAR Filing
@@ -368,7 +395,7 @@ export const SarWorkflowPanel: React.FC<SarWorkflowPanelProps> = ({ caseId, onSa
             <button
               onClick={() => handleReview('do_not_file')}
               disabled={submitting}
-              className="btn btn-ghost text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700"
+              className="btn btn-ghost"
             >
               {submitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
               Decision: Do Not File
@@ -379,14 +406,14 @@ export const SarWorkflowPanel: React.FC<SarWorkflowPanelProps> = ({ caseId, onSa
 
       {/* 2. APPROVED Action Box */}
       {sarRecord.status === 'APPROVED' && (
-        <div className="p-4 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 space-y-3">
-          <div className="flex items-center gap-2 text-emerald-900 dark:text-emerald-200 font-mono font-bold text-xs">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+        <div style={{ padding: 14, borderRadius: 6, background: 'var(--success-subtle)', border: '1px solid var(--success-border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--success-text)', fontFamily: 'monospace', fontWeight: 700, fontSize: 12 }}>
+            <CheckCircle2 className="w-4 h-4" />
             <span>SAR APPROVED BY ANALYST</span>
           </div>
 
           {sarRecord.analyst_notes && (
-            <p className="text-xs text-slate-700 dark:text-slate-300 italic bg-white dark:bg-slate-900 p-2.5 rounded border border-emerald-200 dark:border-emerald-900/40">
+            <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic', background: 'var(--bg-base)', padding: '8px 10px', borderRadius: 4, border: '1px solid var(--success-border)' }}>
               Analyst Notes: "{sarRecord.analyst_notes}"
             </p>
           )}
@@ -394,7 +421,7 @@ export const SarWorkflowPanel: React.FC<SarWorkflowPanelProps> = ({ caseId, onSa
           <button
             onClick={handlePrepare}
             disabled={submitting}
-            className="btn btn-primary bg-blue-600 hover:bg-blue-700"
+            className="btn btn-primary"
           >
             {submitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <FileCheck className="w-3.5 h-3.5" />}
             Prepare Internal SAR Report Draft
@@ -404,23 +431,23 @@ export const SarWorkflowPanel: React.FC<SarWorkflowPanelProps> = ({ caseId, onSa
 
       {/* 3. PREPARED / SUBMISSION_PENDING Action & Notice Box */}
       {(sarRecord.status === 'PREPARED' || sarRecord.status === 'SUBMISSION_PENDING') && (
-        <div className="p-4 rounded-lg bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 space-y-3">
-          <div className="flex items-center gap-2 text-purple-900 dark:text-purple-200 font-mono font-bold text-xs">
-            <FileCheck className="w-4 h-4 text-purple-600" />
+        <div style={{ padding: 14, borderRadius: 6, background: 'rgba(124, 58, 237, 0.06)', border: '1px solid rgba(124, 58, 237, 0.25)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#7c3aed', fontFamily: 'monospace', fontWeight: 700, fontSize: 12 }}>
+            <FileCheck className="w-4 h-4" />
             <span>INTERNAL SAR REPORT DRAFT PREPARED</span>
             {sarRecord.report_reference && (
-              <span className="ml-auto font-mono text-[10px] px-2 py-0.5 rounded bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 font-semibold">
+              <span style={{ marginLeft: 'auto', fontFamily: 'monospace', fontSize: 10, padding: '2px 6px', borderRadius: 3, background: 'rgba(124, 58, 237, 0.12)', color: '#7c3aed', fontWeight: 600 }}>
                 Ref: {sarRecord.report_reference}
               </span>
             )}
           </div>
 
           {/* External Filing Unconfigured Notice Banner */}
-          <div className="p-3 rounded bg-amber-50 text-amber-900 dark:bg-amber-950/60 dark:text-amber-200 border border-amber-200 dark:border-amber-800 text-xs flex items-start gap-2">
-            <Lock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div style={{ padding: '10px 12px', borderRadius: 5, background: 'var(--warn-subtle)', border: '1px solid var(--warn-border)', color: 'var(--warn-text)', fontSize: 12, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+            <Lock className="w-4 h-4" style={{ flexShrink: 0, marginTop: 2, color: 'var(--warn)' }} />
             <div>
-              <span className="font-semibold block mb-0.5">External Filing Integration Not Configured</span>
-              <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">
+              <span style={{ fontWeight: 600, display: 'block', marginBottom: 2 }}>External Filing Integration Not Configured</span>
+              <p style={{ margin: 0, fontSize: 11, lineHeight: 1.45, color: 'var(--warn-text)' }}>
                 This environment tracks internal SAR preparation only. No fake regulator submissions are performed.
               </p>
             </div>
@@ -428,9 +455,9 @@ export const SarWorkflowPanel: React.FC<SarWorkflowPanelProps> = ({ caseId, onSa
 
           {/* Structured Report Draft JSON Preview */}
           {sarRecord.report_draft_json && (
-            <div className="space-y-1">
-              <span className="text-[10px] font-mono font-semibold text-slate-400 uppercase">Prepared Report Summary</span>
-              <pre className="p-3 rounded bg-slate-900 text-slate-100 text-[10px] font-mono overflow-x-auto max-h-44">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={boxLabelStyle}>Prepared Report Summary</span>
+              <pre style={{ margin: 0, padding: 10, borderRadius: 5, background: '#111827', color: '#f9fafb', fontSize: 10, fontFamily: 'monospace', overflowX: 'auto', maxHeight: 180 }}>
                 {JSON.stringify(sarRecord.report_draft_json, null, 2)}
               </pre>
             </div>
@@ -440,7 +467,8 @@ export const SarWorkflowPanel: React.FC<SarWorkflowPanelProps> = ({ caseId, onSa
             <button
               onClick={handleSubmissionTracking}
               disabled={submitting}
-              className="btn btn-ghost border-purple-300 text-purple-900 dark:text-purple-200"
+              className="btn btn-ghost"
+              style={{ borderColor: 'rgba(124, 58, 237, 0.3)', color: '#7c3aed' }}
             >
               {submitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
               Track Internal Submission Pending
@@ -451,18 +479,18 @@ export const SarWorkflowPanel: React.FC<SarWorkflowPanelProps> = ({ caseId, onSa
 
       {/* 4. NOT_FILED Box */}
       {sarRecord.status === 'NOT_FILED' && (
-        <div className="p-3.5 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
-          <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-mono font-bold text-xs">
-            <XCircle className="w-4 h-4 text-slate-500" />
+        <div style={{ padding: '12px 14px', borderRadius: 6, background: 'var(--bg-raised)', border: '1px solid var(--border-default)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)', fontFamily: 'monospace', fontWeight: 700, fontSize: 12 }}>
+            <XCircle className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
             <span>ANALYST DECISION: DO NOT FILE</span>
           </div>
 
           {sarRecord.analyst_notes && (
-            <p className="text-xs text-slate-600 dark:text-slate-400 italic">
+            <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic' }}>
               Review Notes: "{sarRecord.analyst_notes}"
             </p>
           )}
-          <span className="text-[10px] text-slate-400 font-mono block">
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'monospace', display: 'block' }}>
             Reviewed At: {sarRecord.reviewed_at ? formatDate(sarRecord.reviewed_at) : 'Recorded'}
           </span>
         </div>

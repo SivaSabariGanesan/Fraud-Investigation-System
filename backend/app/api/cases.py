@@ -1,3 +1,5 @@
+from uuid import uuid4
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Optional
@@ -6,6 +8,7 @@ from app.services.database import get_db
 from app.models.investigation import CaseModel, InvestigationModel, AuditEventModel, EvidenceRequestModel
 from app.schemas.investigation import (
     CaseResponse,
+    ManualCaseCreateRequest,
     InvestigationHistoryResponse,
     InvestigationHistoryItem,
     AuditEventItem,
@@ -13,6 +16,10 @@ from app.schemas.investigation import (
     GraphEdge,
     CaseGraphResponse
 )
+from app.agent.schemas import InvestigationResult
+from app.agent.investigator import investigator_agent
+from app.services.history_service import create_audit_event, persist_investigation_run
+from app.services.evidence_request_service import sync_tigergraph_requests
 from app.services.tigergraph import tigergraph_service
 from app.agent.tools import is_valid_transaction
 
@@ -25,6 +32,170 @@ async def list_cases(db: Session = Depends(get_db)):
     """
     cases = db.query(CaseModel).order_by(CaseModel.created_at.desc()).all()
     return cases
+
+@router.post("/manual", response_model=InvestigationResult)
+async def create_manual_case(
+    body: ManualCaseCreateRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Manually create a new fraud case and run the real investigation pipeline.
+    Validates request, prevents duplicate Case IDs, persists manual trigger info,
+    and runs the 12-step investigator workflow against TigerGraph & Groq.
+    """
+    case_id = body.case_id.strip()
+    if not case_id:
+        raise HTTPException(status_code=400, detail="Case ID is required.")
+
+    transaction_id = body.transaction_id.strip()
+    if not transaction_id:
+        raise HTTPException(status_code=400, detail="Transaction ID is required.")
+
+    trigger_type = body.trigger_type.strip()
+    valid_triggers = ["customer_report", "fraud_signal", "analyst_review"]
+    if trigger_type not in valid_triggers:
+        raise HTTPException(status_code=400, detail=f"Trigger type must be one of: {', '.join(valid_triggers)}")
+
+    trigger_text = body.trigger_text.strip()
+    if not trigger_text:
+        raise HTTPException(status_code=400, detail="Customer Report / Analyst Notes is required.")
+
+    # 1. Prevent duplicate Case IDs
+    existing_case = db.query(CaseModel).filter(CaseModel.case_id == case_id).first()
+    if existing_case:
+        raise HTTPException(status_code=400, detail=f"Case ID '{case_id}' already exists.")
+
+    try:
+        tg_case_v = await tigergraph_service.get_vertex("ClosedCase", case_id)
+        if tg_case_v:
+            raise HTTPException(status_code=400, detail=f"Case ID '{case_id}' already exists in graph.")
+    except Exception:
+        pass
+
+    investigation_id = f"INV-{uuid4().hex[:8].upper()}"
+
+    # 2. Create/persist case in SQLite
+    customer_id = body.customer_id.strip() if body.customer_id and body.customer_id.strip() else None
+
+    new_case = CaseModel(
+        case_id=case_id,
+        customer_id=customer_id,
+        transaction_id=transaction_id,
+        trigger_type=trigger_type,
+        trigger_text=trigger_text,
+        status="INVESTIGATING",
+        exposure=body.amount if body.amount is not None else 0.0,
+        notes=f"[{trigger_type.upper()}] {trigger_text}",
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow()
+    )
+    db.add(new_case)
+    db.commit()
+    db.refresh(new_case)
+
+    # 3. Create Audit Events
+    create_audit_event(
+        db, case_id=case_id, investigation_id=investigation_id,
+        event_type="CASE_OPENED",
+        description=f"Manual fraud case '{case_id}' created by analyst with trigger '{trigger_type}'.",
+        actor="ANALYST"
+    )
+
+    create_audit_event(
+        db, case_id=case_id, investigation_id=investigation_id,
+        event_type="INVESTIGATION_STARTED",
+        description=f"Investigation run '{investigation_id}' started for manual case '{case_id}'.",
+        actor="AGENT"
+    )
+
+    try:
+        # 4. Run real investigation workflow
+        notes = f"Trigger ({trigger_type}): {trigger_text}"
+        agent_output = await investigator_agent.investigate(case_id, notes)
+        agent_output.investigation_id = investigation_id
+
+        # 5. Sync TigerGraph EvidenceRequests if any
+        raw_er_list = []
+        for er in agent_output.evidence_requests:
+            if hasattr(er, "model_dump"):
+                d = er.model_dump()
+                if d.get("details"):
+                    d.update(d["details"])
+                raw_er_list.append(d)
+        sync_tigergraph_requests(db, case_id, raw_er_list)
+
+        # Audit events
+        create_audit_event(
+            db, case_id=case_id, investigation_id=investigation_id,
+            event_type="EVIDENCE_COLLECTED",
+            description=f"Retrieved & normalized {len(agent_output.evidence)} evidence items from TigerGraph.",
+            actor="AGENT"
+        )
+        create_audit_event(
+            db, case_id=case_id, investigation_id=investigation_id,
+            event_type="LLM_REASONING_COMPLETED",
+            description="Groq AI reasoning analysis completed.",
+            actor="AGENT",
+            metadata=agent_output.tokens
+        )
+        trig_rules = [r.get("rule_id") for r in agent_output.rules_evaluated if r.get("triggered")]
+        create_audit_event(
+            db, case_id=case_id, investigation_id=investigation_id,
+            event_type="POLICY_EVALUATED",
+            description=f"Evaluated policy rules R1-R10. Triggered rules: {', '.join(trig_rules) if trig_rules else 'None'}.",
+            actor="AGENT"
+        )
+        create_audit_event(
+            db, case_id=case_id, investigation_id=investigation_id,
+            event_type="DECISION_GENERATED",
+            description=f"Generated decision state '{agent_output.status}' with verdict '{agent_output.verdict}'.",
+            actor="AGENT"
+        )
+
+        # 6. Immutably persist investigation run
+        persist_investigation_run(
+            db, investigation_id=investigation_id, result=agent_output, decision_rules=agent_output.rules_evaluated
+        )
+
+        # 7. Sync SAR candidate evaluation
+        try:
+            from app.services.sar_service import sync_sar_candidate_from_result
+            sync_sar_candidate_from_result(db, case_id=case_id, investigation_id=investigation_id, agent_output=agent_output)
+        except Exception:
+            pass
+
+        create_audit_event(
+            db, case_id=case_id, investigation_id=investigation_id,
+            event_type="INVESTIGATION_COMPLETED",
+            description=f"Investigation '{investigation_id}' completed successfully.",
+            actor="AGENT"
+        )
+
+        # 8. Update CaseModel summary
+        if agent_output.customer_id:
+            new_case.customer_id = agent_output.customer_id
+        new_case.status = agent_output.case_status
+        new_case.verdict = agent_output.verdict
+        new_case.fraud_probability = agent_output.fraud_probability
+        new_case.pattern = agent_output.pattern
+        if agent_output.exposure and agent_output.exposure > 0:
+            new_case.exposure = agent_output.exposure
+        new_case.updated_at = datetime.utcnow()
+        db.commit()
+
+        return agent_output
+
+    except Exception as e:
+        create_audit_event(
+            db, case_id=case_id, investigation_id=investigation_id,
+            event_type="INVESTIGATION_FAILED",
+            description=f"Investigation workflow failed: {str(e)}",
+            actor="AGENT"
+        )
+        new_case.status = "UNDER_INVESTIGATION"
+        new_case.updated_at = datetime.utcnow()
+        db.commit()
+        raise HTTPException(status_code=500, detail=f"Investigation failed for case '{case_id}': {str(e)}")
 
 @router.get("/{case_id}", response_model=CaseResponse)
 async def get_case(case_id: str, db: Session = Depends(get_db)):

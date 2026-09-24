@@ -18,6 +18,9 @@ Base.metadata.create_all(bind=engine)
 # Runtime schema migrations for existing SQLite databases
 _migrations = [
     "ALTER TABLE cases ADD COLUMN customer_id VARCHAR;",
+    "ALTER TABLE cases ADD COLUMN transaction_id VARCHAR;",
+    "ALTER TABLE cases ADD COLUMN trigger_type VARCHAR;",
+    "ALTER TABLE cases ADD COLUMN trigger_text TEXT;",
 ]
 try:
     with engine.connect() as conn:

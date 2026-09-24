@@ -2,7 +2,7 @@ import React from 'react';
 import { Case } from '../types/investigation';
 import { StatusBadge } from '../components/StatusBadge';
 import { formatCurrency, formatDate } from '../lib/utils';
-import { RefreshCw, ArrowRight, AlertCircle } from 'lucide-react';
+import { RefreshCw, ArrowRight, AlertCircle, Plus } from 'lucide-react';
 
 interface DashboardProps {
   cases: Case[];
@@ -10,6 +10,7 @@ interface DashboardProps {
   error?: string | null;
   onRefresh?: () => void;
   onSelectCase: (caseId: string) => void;
+  onNewInvestigation?: () => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -18,6 +19,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   error,
   onRefresh,
   onSelectCase,
+  onNewInvestigation,
 }) => {
   const totalCases = cases.length;
   const underInvestigation = cases.filter(
@@ -47,12 +49,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
             Real-time fraud cases and agent investigation status
           </p>
         </div>
-        {onRefresh && (
-          <button className="btn btn-ghost" onClick={onRefresh} disabled={loading}>
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {onRefresh && (
+            <button className="btn btn-ghost" onClick={onRefresh} disabled={loading}>
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          )}
+          {onNewInvestigation && (
+            <button className="btn btn-primary" onClick={onNewInvestigation}>
+              <Plus className="w-3.5 h-3.5" />
+              New Investigation
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Error */}

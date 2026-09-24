@@ -53,12 +53,41 @@ class FraudInvestigatorAgent:
 
         # Step 1: Load case details
         case_info = await self._safe_tool_call(state, "get_case", get_case, case_id)
+        db_case = None
+        try:
+            from app.services.database import SessionLocal
+            from app.models.investigation import CaseModel
+            _db = SessionLocal()
+            db_case = _db.query(CaseModel).filter(CaseModel.case_id == case_id).first()
+            _db.close()
+        except Exception as db_err:
+            logger.warning(f"Error querying CaseModel for case '{case_id}': {db_err}")
+
         if case_info and (case_info.get("id") or case_info.get("case_id")):
             c_id = case_info.get("id") or case_info.get("case_id")
             state.investigation_notes.append(f"Loaded case vertex: {c_id}")
+        elif db_case:
+            case_info = {
+                "id": db_case.case_id,
+                "case_id": db_case.case_id,
+                "customer_id": db_case.customer_id,
+                "transaction_id": getattr(db_case, "transaction_id", None),
+                "trigger_type": getattr(db_case, "trigger_type", None),
+                "trigger_text": getattr(db_case, "trigger_text", None),
+                "status": db_case.status,
+                "notes": db_case.notes,
+            }
+            state.investigation_notes.append(f"Loaded case record from SQLite DB: {case_id}")
 
         # Step 2: Retrieve case transactions
         txns = await self._safe_tool_call(state, "get_case_transactions", get_case_transactions, case_id) or []
+        db_txn_id = getattr(db_case, "transaction_id", None) if db_case else (case_info.get("transaction_id") if case_info else None)
+        if not txns and db_txn_id:
+            from app.agent.tools import get_transaction
+            direct_txn = await self._safe_tool_call(state, "get_transaction", get_transaction, str(db_txn_id))
+            if direct_txn:
+                txns = [direct_txn]
+
         all_txn_ids = [t.get("id") or t.get("TransactionID") for t in txns if (t.get("id") or t.get("TransactionID"))]
         state.transaction_ids = all_txn_ids
         state.flagged_transaction_ids = [t.get("id") or t.get("TransactionID") for t in txns if t.get("status") == "FLAGGED" or t.get("risk_score", 0) >= 0.3]
@@ -95,8 +124,10 @@ class FraudInvestigatorAgent:
         card_ids = [c.get("id") or c.get("card_id") for c in cards_info if (c.get("id") or c.get("card_id"))]
         state.card_ids = card_ids
 
-        # Retrieve customer from case_info, subgraph, or card owner
+        # Retrieve customer from case_info, db_case, subgraph, or card owner
         target_cust_id = case_info.get("customer_id") if case_info else None
+        if not target_cust_id and db_case and db_case.customer_id:
+            target_cust_id = db_case.customer_id
         if not target_cust_id:
             custs_in_subgraph = subgraph.get("entities", {}).get("Customer", [])
             if custs_in_subgraph:

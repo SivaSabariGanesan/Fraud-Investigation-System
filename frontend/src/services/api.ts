@@ -16,6 +16,7 @@ import {
   SarReviewPayload,
   SarPreparePayload,
   SarSubmissionStatusPayload,
+  ManualCaseCreatePayload,
 } from '../types/investigation';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -151,6 +152,12 @@ export const apiService = {
   /** Update internal submission tracking status for a PREPARED SAR record. */
   async updateCaseSarSubmission(caseId: string, payload?: SarSubmissionStatusPayload): Promise<SarRecord> {
     const response = await apiClient.post<SarRecord>(`/api/cases/${caseId}/sar/submission-status`, payload || {});
+    return response.data;
+  },
+
+  /** Manually create a new fraud case and run the investigation pipeline. */
+  async createManualCase(payload: ManualCaseCreatePayload): Promise<InvestigationResult> {
+    const response = await apiClient.post<InvestigationResult>('/api/cases/manual', payload);
     return response.data;
   },
 };

@@ -10,6 +10,9 @@ class CaseModel(Base):
 
     case_id = Column(String, primary_key=True, index=True)
     customer_id = Column(String, nullable=True)                  # e.g., C08623
+    transaction_id = Column(String, nullable=True)               # e.g., 3530164
+    trigger_type = Column(String, nullable=True)                 # e.g., customer_report, fraud_signal, analyst_review
+    trigger_text = Column(Text, nullable=True)                   # e.g., Customer report or analyst notes
     status = Column(String, nullable=False, default="PENDING")  # PENDING, INVESTIGATING, COMPLETED, CLOSED
     verdict = Column(String, nullable=True)                      # APPROVED, DECLINED, NEEDS_REVIEW
     fraud_probability = Column(Float, nullable=True)            # Risk score (0.0 to 1.0)

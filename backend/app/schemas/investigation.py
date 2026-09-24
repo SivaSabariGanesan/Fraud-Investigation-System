@@ -71,6 +71,9 @@ class HealthCheck(BaseModel):
 class CaseBase(BaseModel):
     case_id: str
     customer_id: Optional[str] = None
+    transaction_id: Optional[str] = None
+    trigger_type: Optional[str] = None
+    trigger_text: Optional[str] = None
     status: str
     verdict: Optional[str] = None
     fraud_probability: Optional[float] = None
@@ -79,6 +82,14 @@ class CaseBase(BaseModel):
 
 class CaseCreate(CaseBase):
     notes: Optional[str] = None
+
+class ManualCaseCreateRequest(BaseModel):
+    case_id: str = Field(..., min_length=1, description="Unique Case ID (required)")
+    customer_id: Optional[str] = Field(None, description="Customer ID (optional)")
+    transaction_id: str = Field(..., min_length=1, description="Transaction ID (required)")
+    amount: Optional[float] = Field(None, description="Transaction Amount (optional)")
+    trigger_type: str = Field(..., min_length=1, description="Trigger Type: customer_report, fraud_signal, analyst_review")
+    trigger_text: str = Field(..., min_length=1, description="Customer report / analyst notes (required)")
 
 class CaseResponse(CaseBase):
     created_at: datetime
