@@ -5,7 +5,7 @@
   "status": "UNDER_INVESTIGATION",
   "verdict": "NEEDS_REVIEW",
   "fraud_probability": null,
-  "pattern": "Multiple transactions with similar characteristics (in-person, unknown status)",
+  "pattern": "Customer disputes transaction",
   "evidence": [
     {
       "evidence_id": "EV-CASE-HHG-018",
@@ -770,7 +770,7 @@
     "exposure_usd": 1147.0899999999997,
     "reason": "No confirmed fraud policy triggers met.",
     "created_at": "2026-09-23T17:28:02.721567",
-    "updated_at": "2026-09-24T23:15:00.270963"
+    "updated_at": "2026-09-26T04:03:14.661380"
   },
   "stop_reason": "WORKFLOW_COMPLETE",
   "rules_evaluated": [
@@ -855,7 +855,7 @@
       "severity": "HIGH"
     }
   ],
-  "reasoning_summary": "Case HHG-018: customer dispute report with multiple transactions observed, but no clear indication of fraud. Disputed transactions (3491361) may require further investigation.",
+  "reasoning_summary": "Customer dispute report triggered the investigation HHG-018. The customer, C02354, disputes a transaction (3491361) with a $39.08 amount, stating they never made the purchase. The case has a status of 'UNKNOWN' and verdict of 'UNSPECIFIED'. The customer has multiple cards and devices, but no stolen cards or VPN devices are detected. The regional mismatches, disposable emails, and historical fraud cases are all zero. The total exposure is 1147.09.",
   "tool_calls": [
     {
       "tool_name": "get_case",
@@ -875,7 +875,7 @@
         "analyst_notes": "",
         "id": "HHG-018"
       },
-      "timestamp": "2026-09-24T23:13:57.788907",
+      "timestamp": "2026-09-26T04:02:00.408594",
       "error": null
     },
     {
@@ -896,7 +896,7 @@
           "id": "3491361"
         }
       ],
-      "timestamp": "2026-09-24T23:14:08.634816",
+      "timestamp": "2026-09-26T04:02:11.881110",
       "error": null
     },
     {
@@ -910,7 +910,7 @@
         "card_id": "19248",
         "id": "19248"
       },
-      "timestamp": "2026-09-24T23:14:10.129892",
+      "timestamp": "2026-09-26T04:02:13.509624",
       "error": null
     },
     {
@@ -924,7 +924,7 @@
         "card_id": "19248",
         "id": "19248"
       },
-      "timestamp": "2026-09-24T23:14:22.444364",
+      "timestamp": "2026-09-26T04:02:26.794184",
       "error": null
     },
     {
@@ -938,7 +938,7 @@
         "customer_id": "C02354",
         "id": "C02354"
       },
-      "timestamp": "2026-09-24T23:14:23.222240",
+      "timestamp": "2026-09-26T04:02:27.622985",
       "error": null
     },
     {
@@ -954,7 +954,7 @@
           "id": "19248"
         }
       ],
-      "timestamp": "2026-09-24T23:14:24.763629",
+      "timestamp": "2026-09-26T04:02:29.291326",
       "error": null
     },
     {
@@ -965,7 +965,7 @@
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T23:14:25.526396",
+      "timestamp": "2026-09-26T04:02:30.128301",
       "error": null
     },
     {
@@ -1067,7 +1067,7 @@
           "id": "3046957"
         }
       ],
-      "timestamp": "2026-09-24T23:14:30.292207",
+      "timestamp": "2026-09-26T04:02:33.860638",
       "error": null
     },
     {
@@ -1102,7 +1102,7 @@
           "id": "iOS Device"
         }
       ],
-      "timestamp": "2026-09-24T23:14:32.010362",
+      "timestamp": "2026-09-26T04:02:35.660494",
       "error": null
     },
     {
@@ -1141,7 +1141,7 @@
           "id": "330.0"
         }
       ],
-      "timestamp": "2026-09-24T23:14:33.706051",
+      "timestamp": "2026-09-26T04:02:37.595134",
       "error": null
     },
     {
@@ -1185,7 +1185,7 @@
           "id": "hotmail.com"
         }
       ],
-      "timestamp": "2026-09-24T23:14:35.417319",
+      "timestamp": "2026-09-26T04:02:39.423560",
       "error": null
     },
     {
@@ -1211,7 +1211,7 @@
           "id": "HHG-018"
         }
       ],
-      "timestamp": "2026-09-24T23:14:36.918853",
+      "timestamp": "2026-09-26T04:02:41.126765",
       "error": null
     },
     {
@@ -1222,14 +1222,14 @@
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T23:14:48.424627",
+      "timestamp": "2026-09-26T04:02:53.528572",
       "error": null
     }
   ],
   "tokens": {
-    "prompt": 2249,
-    "completion": 358,
-    "total": 2607
+    "prompt": 2309,
+    "completion": 1042,
+    "total": 3351
   },
-  "latency": 10.986
+  "latency": 20.324
 }

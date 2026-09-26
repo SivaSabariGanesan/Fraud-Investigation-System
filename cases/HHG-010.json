@@ -1,11 +1,11 @@
 {
   "case_id": "HHG-010",
-  "customer_id": "CUST-HHG010",
+  "customer_id": "C10434",
   "case_status": "UNDER_INVESTIGATION",
   "status": "UNDER_INVESTIGATION",
   "verdict": "NEEDS_REVIEW",
   "fraud_probability": null,
-  "pattern": "Customer Dispute / Unauthorized Transaction Report",
+  "pattern": "Multiple transactions with high risk signals, including transaction 3506725",
   "evidence": [
     {
       "evidence_id": "EV-CASE-HHG-010",
@@ -44,24 +44,24 @@
       "risk_signal": null
     },
     {
-      "evidence_id": "EV-CUST-CUST-HHG010",
+      "evidence_id": "EV-CUST-C10434",
       "evidence_type": "Customer",
       "source": "TigerGraph",
-      "description": "Customer record 'CUST-HHG010' (UNNAMED) observed with recorded risk_level='UNSPECIFIED'.",
-      "related_entity": "CUST-HHG010",
+      "description": "Customer record 'C10434' (UNNAMED) observed with recorded risk_level='UNSPECIFIED'.",
+      "related_entity": "C10434",
       "transaction_id": null,
       "card_id": null,
       "strength": "NEUTRAL",
       "raw_data": {
-        "id": "CUST-HHG010",
-        "customer_id": "CUST-HHG010"
+        "customer_id": "C10434",
+        "id": "C10434"
       },
       "timestamp": null,
-      "id": "EV-CUST-CUST-HHG010",
+      "id": "EV-CUST-C10434",
       "type": "Customer",
       "details": {
-        "id": "CUST-HHG010",
-        "customer_id": "CUST-HHG010"
+        "customer_id": "C10434",
+        "id": "C10434"
       },
       "risk_signal": null
     },
@@ -84,6 +84,28 @@
       "details": {
         "card_id": " online) at 0.90. Review and decide.\"",
         "id": " online) at 0.90. Review and decide.\""
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-CARD-17379",
+      "evidence_type": "card",
+      "source": "TigerGraph",
+      "description": "Card record '17379' (UNKNOWN, UNKNOWN) observed. Stolen flag set to False.",
+      "related_entity": null,
+      "transaction_id": null,
+      "card_id": "17379",
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "card_id": "17379",
+        "id": "17379"
+      },
+      "timestamp": null,
+      "id": "EV-CARD-17379",
+      "type": "card",
+      "details": {
+        "card_id": "17379",
+        "id": "17379"
       },
       "risk_signal": null
     },
@@ -118,6 +140,694 @@
         "channel": "in_person",
         "status": "FLAGGED",
         "raw_edge_id": "000.03"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-TXN-3506725",
+      "evidence_type": "Transaction",
+      "source": "TigerGraph",
+      "description": "Transaction '3506725' observed: amount=1000.03 USD, status='UNKNOWN'.",
+      "related_entity": null,
+      "transaction_id": "3506725",
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "TransactionID": "3506725",
+        "amount": 1000.03,
+        "ts": "2016-12-02 15:18:27",
+        "channel": "online",
+        "risk_score": 0.9,
+        "product_code": "R",
+        "id": "3506725"
+      },
+      "timestamp": "2016-12-02T15:18:27",
+      "id": "EV-TXN-3506725",
+      "type": "Transaction",
+      "details": {
+        "TransactionID": "3506725",
+        "amount": 1000.03,
+        "ts": "2016-12-02 15:18:27",
+        "channel": "online",
+        "risk_score": 0.9,
+        "product_code": "R",
+        "id": "3506725"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-TXN-3076736",
+      "evidence_type": "Transaction",
+      "source": "TigerGraph",
+      "description": "Transaction '3076736' observed: amount=50.05 USD, status='UNKNOWN'.",
+      "related_entity": null,
+      "transaction_id": "3076736",
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "TransactionID": "3076736",
+        "amount": 50.05,
+        "ts": "2016-07-21 05:56:18",
+        "channel": "online",
+        "risk_score": 0.93,
+        "product_code": "R",
+        "id": "3076736"
+      },
+      "timestamp": "2016-07-21T05:56:18",
+      "id": "EV-TXN-3076736",
+      "type": "Transaction",
+      "details": {
+        "TransactionID": "3076736",
+        "amount": 50.05,
+        "ts": "2016-07-21 05:56:18",
+        "channel": "online",
+        "risk_score": 0.93,
+        "product_code": "R",
+        "id": "3076736"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-TXN-3282661",
+      "evidence_type": "Transaction",
+      "source": "TigerGraph",
+      "description": "Transaction '3282661' observed: amount=19.98 USD, status='UNKNOWN'.",
+      "related_entity": null,
+      "transaction_id": "3282661",
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "TransactionID": "3282661",
+        "amount": 19.98,
+        "ts": "2016-09-19 22:25:01",
+        "channel": "online",
+        "risk_score": 0.05,
+        "product_code": "H",
+        "id": "3282661"
+      },
+      "timestamp": "2016-09-19T22:25:01",
+      "id": "EV-TXN-3282661",
+      "type": "Transaction",
+      "details": {
+        "TransactionID": "3282661",
+        "amount": 19.98,
+        "ts": "2016-09-19 22:25:01",
+        "channel": "online",
+        "risk_score": 0.05,
+        "product_code": "H",
+        "id": "3282661"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-TXN-3392418",
+      "evidence_type": "Transaction",
+      "source": "TigerGraph",
+      "description": "Transaction '3392418' observed: amount=58.01 USD, status='UNKNOWN'.",
+      "related_entity": null,
+      "transaction_id": "3392418",
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "TransactionID": "3392418",
+        "amount": 58.01,
+        "ts": "2016-10-24 01:06:51",
+        "channel": "in_person",
+        "risk_score": 0.01,
+        "product_code": "W",
+        "id": "3392418"
+      },
+      "timestamp": "2016-10-24T01:06:51",
+      "id": "EV-TXN-3392418",
+      "type": "Transaction",
+      "details": {
+        "TransactionID": "3392418",
+        "amount": 58.01,
+        "ts": "2016-10-24 01:06:51",
+        "channel": "in_person",
+        "risk_score": 0.01,
+        "product_code": "W",
+        "id": "3392418"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-TXN-3306585",
+      "evidence_type": "Transaction",
+      "source": "TigerGraph",
+      "description": "Transaction '3306585' observed: amount=670.04 USD, status='UNKNOWN'.",
+      "related_entity": null,
+      "transaction_id": "3306585",
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "TransactionID": "3306585",
+        "amount": 670.04,
+        "ts": "2016-09-28 00:47:14",
+        "channel": "in_person",
+        "risk_score": 0.56,
+        "product_code": "W",
+        "id": "3306585"
+      },
+      "timestamp": "2016-09-28T00:47:14",
+      "id": "EV-TXN-3306585",
+      "type": "Transaction",
+      "details": {
+        "TransactionID": "3306585",
+        "amount": 670.04,
+        "ts": "2016-09-28 00:47:14",
+        "channel": "in_person",
+        "risk_score": 0.56,
+        "product_code": "W",
+        "id": "3306585"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-TXN-3094730",
+      "evidence_type": "Transaction",
+      "source": "TigerGraph",
+      "description": "Transaction '3094730' observed: amount=59.92 USD, status='UNKNOWN'.",
+      "related_entity": null,
+      "transaction_id": "3094730",
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "TransactionID": "3094730",
+        "amount": 59.92,
+        "ts": "2016-07-24 15:14:12",
+        "channel": "online",
+        "risk_score": 0.01,
+        "product_code": "H",
+        "id": "3094730"
+      },
+      "timestamp": "2016-07-24T15:14:12",
+      "id": "EV-TXN-3094730",
+      "type": "Transaction",
+      "details": {
+        "TransactionID": "3094730",
+        "amount": 59.92,
+        "ts": "2016-07-24 15:14:12",
+        "channel": "online",
+        "risk_score": 0.01,
+        "product_code": "H",
+        "id": "3094730"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-TXN-3082326",
+      "evidence_type": "Transaction",
+      "source": "TigerGraph",
+      "description": "Transaction '3082326' observed: amount=669.99 USD, status='UNKNOWN'.",
+      "related_entity": null,
+      "transaction_id": "3082326",
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "TransactionID": "3082326",
+        "amount": 669.99,
+        "ts": "2016-07-22 07:27:17",
+        "channel": "in_person",
+        "risk_score": 0.48,
+        "product_code": "W",
+        "id": "3082326"
+      },
+      "timestamp": "2016-07-22T07:27:17",
+      "id": "EV-TXN-3082326",
+      "type": "Transaction",
+      "details": {
+        "TransactionID": "3082326",
+        "amount": 669.99,
+        "ts": "2016-07-22 07:27:17",
+        "channel": "in_person",
+        "risk_score": 0.48,
+        "product_code": "W",
+        "id": "3082326"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-TXN-3075894",
+      "evidence_type": "Transaction",
+      "source": "TigerGraph",
+      "description": "Transaction '3075894' observed: amount=25.06 USD, status='UNKNOWN'.",
+      "related_entity": null,
+      "transaction_id": "3075894",
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "TransactionID": "3075894",
+        "amount": 25.06,
+        "ts": "2016-07-21 01:29:53",
+        "channel": "online",
+        "risk_score": 0.57,
+        "product_code": "H",
+        "id": "3075894"
+      },
+      "timestamp": "2016-07-21T01:29:53",
+      "id": "EV-TXN-3075894",
+      "type": "Transaction",
+      "details": {
+        "TransactionID": "3075894",
+        "amount": 25.06,
+        "ts": "2016-07-21 01:29:53",
+        "channel": "online",
+        "risk_score": 0.57,
+        "product_code": "H",
+        "id": "3075894"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-TXN-3351935",
+      "evidence_type": "Transaction",
+      "source": "TigerGraph",
+      "description": "Transaction '3351935' observed: amount=59.04 USD, status='UNKNOWN'.",
+      "related_entity": null,
+      "transaction_id": "3351935",
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "TransactionID": "3351935",
+        "amount": 59.04,
+        "ts": "2016-10-10 17:56:42",
+        "channel": "in_person",
+        "risk_score": 0.05,
+        "product_code": "W",
+        "id": "3351935"
+      },
+      "timestamp": "2016-10-10T17:56:42",
+      "id": "EV-TXN-3351935",
+      "type": "Transaction",
+      "details": {
+        "TransactionID": "3351935",
+        "amount": 59.04,
+        "ts": "2016-10-10 17:56:42",
+        "channel": "in_person",
+        "risk_score": 0.05,
+        "product_code": "W",
+        "id": "3351935"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-TXN-3087486",
+      "evidence_type": "Transaction",
+      "source": "TigerGraph",
+      "description": "Transaction '3087486' observed: amount=50.05 USD, status='UNKNOWN'.",
+      "related_entity": null,
+      "transaction_id": "3087486",
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "TransactionID": "3087486",
+        "amount": 50.05,
+        "ts": "2016-07-23 03:44:14",
+        "channel": "online",
+        "risk_score": 0.61,
+        "product_code": "H",
+        "id": "3087486"
+      },
+      "timestamp": "2016-07-23T03:44:14",
+      "id": "EV-TXN-3087486",
+      "type": "Transaction",
+      "details": {
+        "TransactionID": "3087486",
+        "amount": 50.05,
+        "ts": "2016-07-23 03:44:14",
+        "channel": "online",
+        "risk_score": 0.61,
+        "product_code": "H",
+        "id": "3087486"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-TXN-3397310",
+      "evidence_type": "Transaction",
+      "source": "TigerGraph",
+      "description": "Transaction '3397310' observed: amount=29.97 USD, status='UNKNOWN'.",
+      "related_entity": null,
+      "transaction_id": "3397310",
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "TransactionID": "3397310",
+        "amount": 29.97,
+        "ts": "2016-10-25 19:33:28",
+        "channel": "online",
+        "risk_score": 0.25,
+        "product_code": "H",
+        "id": "3397310"
+      },
+      "timestamp": "2016-10-25T19:33:28",
+      "id": "EV-TXN-3397310",
+      "type": "Transaction",
+      "details": {
+        "TransactionID": "3397310",
+        "amount": 29.97,
+        "ts": "2016-10-25 19:33:28",
+        "channel": "online",
+        "risk_score": 0.25,
+        "product_code": "H",
+        "id": "3397310"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-DEV-Windows",
+      "evidence_type": "device",
+      "source": "TigerGraph",
+      "description": "DeviceProfile 'Windows' (OS: ) observed. VPN/Proxy detected: False.",
+      "related_entity": "Windows",
+      "transaction_id": null,
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "device_id": "Windows",
+        "device_type": "",
+        "device_info": "",
+        "os": "",
+        "browser": "",
+        "screen": "",
+        "proxy_flag": "",
+        "device_status": "",
+        "id": "Windows"
+      },
+      "timestamp": null,
+      "id": "EV-DEV-Windows",
+      "type": "device",
+      "details": {
+        "device_id": "Windows",
+        "device_type": "",
+        "device_info": "",
+        "os": "",
+        "browser": "",
+        "screen": "",
+        "proxy_flag": "",
+        "device_status": "",
+        "id": "Windows"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-DEV-iOS Device",
+      "evidence_type": "device",
+      "source": "TigerGraph",
+      "description": "DeviceProfile 'iOS Device' (OS: ) observed. VPN/Proxy detected: False.",
+      "related_entity": "iOS Device",
+      "transaction_id": null,
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "device_id": "iOS Device",
+        "device_type": "",
+        "device_info": "",
+        "os": "",
+        "browser": "",
+        "screen": "",
+        "proxy_flag": "",
+        "device_status": "",
+        "id": "iOS Device"
+      },
+      "timestamp": null,
+      "id": "EV-DEV-iOS Device",
+      "type": "device",
+      "details": {
+        "device_id": "iOS Device",
+        "device_type": "",
+        "device_info": "",
+        "os": "",
+        "browser": "",
+        "screen": "",
+        "proxy_flag": "",
+        "device_status": "",
+        "id": "iOS Device"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-DEV-MacOS",
+      "evidence_type": "device",
+      "source": "TigerGraph",
+      "description": "DeviceProfile 'MacOS' (OS: ) observed. VPN/Proxy detected: False.",
+      "related_entity": "MacOS",
+      "transaction_id": null,
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "device_id": "MacOS",
+        "device_type": "",
+        "device_info": "",
+        "os": "",
+        "browser": "",
+        "screen": "",
+        "proxy_flag": "",
+        "device_status": "",
+        "id": "MacOS"
+      },
+      "timestamp": null,
+      "id": "EV-DEV-MacOS",
+      "type": "device",
+      "details": {
+        "device_id": "MacOS",
+        "device_type": "",
+        "device_info": "",
+        "os": "",
+        "browser": "",
+        "screen": "",
+        "proxy_flag": "",
+        "device_status": "",
+        "id": "MacOS"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-REG-469.0",
+      "evidence_type": "billing_region",
+      "source": "TigerGraph",
+      "description": "BillingRegion '469.0' (Country: ) observed. Regional mismatch flag: False.",
+      "related_entity": "469.0",
+      "transaction_id": null,
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "region_id": "469.0",
+        "country_code": "",
+        "id": "469.0"
+      },
+      "timestamp": null,
+      "id": "EV-REG-469.0",
+      "type": "billing_region",
+      "details": {
+        "region_id": "469.0",
+        "country_code": "",
+        "id": "469.0"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-REG-330.0",
+      "evidence_type": "billing_region",
+      "source": "TigerGraph",
+      "description": "BillingRegion '330.0' (Country: ) observed. Regional mismatch flag: False.",
+      "related_entity": "330.0",
+      "transaction_id": null,
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "region_id": "330.0",
+        "country_code": "",
+        "id": "330.0"
+      },
+      "timestamp": null,
+      "id": "EV-REG-330.0",
+      "type": "billing_region",
+      "details": {
+        "region_id": "330.0",
+        "country_code": "",
+        "id": "330.0"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-REG-220.0",
+      "evidence_type": "billing_region",
+      "source": "TigerGraph",
+      "description": "BillingRegion '220.0' (Country: ) observed. Regional mismatch flag: False.",
+      "related_entity": "220.0",
+      "transaction_id": null,
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "region_id": "220.0",
+        "country_code": "",
+        "id": "220.0"
+      },
+      "timestamp": null,
+      "id": "EV-REG-220.0",
+      "type": "billing_region",
+      "details": {
+        "region_id": "220.0",
+        "country_code": "",
+        "id": "220.0"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-REG-418.0",
+      "evidence_type": "billing_region",
+      "source": "TigerGraph",
+      "description": "BillingRegion '418.0' (Country: ) observed. Regional mismatch flag: False.",
+      "related_entity": "418.0",
+      "transaction_id": null,
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "region_id": "418.0",
+        "country_code": "",
+        "id": "418.0"
+      },
+      "timestamp": null,
+      "id": "EV-REG-418.0",
+      "type": "billing_region",
+      "details": {
+        "region_id": "418.0",
+        "country_code": "",
+        "id": "418.0"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-DOM-anonymous.com",
+      "evidence_type": "email_domain",
+      "source": "TigerGraph",
+      "description": "EmailDomain 'anonymous.com' observed. Disposable email service domain: False.",
+      "related_entity": "anonymous.com",
+      "transaction_id": null,
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "email_domain": "anonymous.com",
+        "id": "anonymous.com"
+      },
+      "timestamp": null,
+      "id": "EV-DOM-anonymous.com",
+      "type": "email_domain",
+      "details": {
+        "email_domain": "anonymous.com",
+        "id": "anonymous.com"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-DOM-msn.com",
+      "evidence_type": "email_domain",
+      "source": "TigerGraph",
+      "description": "EmailDomain 'msn.com' observed. Disposable email service domain: False.",
+      "related_entity": "msn.com",
+      "transaction_id": null,
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "email_domain": "msn.com",
+        "id": "msn.com"
+      },
+      "timestamp": null,
+      "id": "EV-DOM-msn.com",
+      "type": "email_domain",
+      "details": {
+        "email_domain": "msn.com",
+        "id": "msn.com"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-DOM-gmail.com",
+      "evidence_type": "email_domain",
+      "source": "TigerGraph",
+      "description": "EmailDomain 'gmail.com' observed. Disposable email service domain: False.",
+      "related_entity": "gmail.com",
+      "transaction_id": null,
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "email_domain": "gmail.com",
+        "id": "gmail.com"
+      },
+      "timestamp": null,
+      "id": "EV-DOM-gmail.com",
+      "type": "email_domain",
+      "details": {
+        "email_domain": "gmail.com",
+        "id": "gmail.com"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-DOM-hotmail.com",
+      "evidence_type": "email_domain",
+      "source": "TigerGraph",
+      "description": "EmailDomain 'hotmail.com' observed. Disposable email service domain: False.",
+      "related_entity": "hotmail.com",
+      "transaction_id": null,
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "email_domain": "hotmail.com",
+        "id": "hotmail.com"
+      },
+      "timestamp": null,
+      "id": "EV-DOM-hotmail.com",
+      "type": "email_domain",
+      "details": {
+        "email_domain": "hotmail.com",
+        "id": "hotmail.com"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-DOM-yahoo.com",
+      "evidence_type": "email_domain",
+      "source": "TigerGraph",
+      "description": "EmailDomain 'yahoo.com' observed. Disposable email service domain: False.",
+      "related_entity": "yahoo.com",
+      "transaction_id": null,
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "email_domain": "yahoo.com",
+        "id": "yahoo.com"
+      },
+      "timestamp": null,
+      "id": "EV-DOM-yahoo.com",
+      "type": "email_domain",
+      "details": {
+        "email_domain": "yahoo.com",
+        "id": "yahoo.com"
+      },
+      "risk_signal": null
+    },
+    {
+      "evidence_id": "EV-DOM-netzero.com",
+      "evidence_type": "email_domain",
+      "source": "TigerGraph",
+      "description": "EmailDomain 'netzero.com' observed. Disposable email service domain: False.",
+      "related_entity": "netzero.com",
+      "transaction_id": null,
+      "card_id": null,
+      "strength": "NEUTRAL",
+      "raw_data": {
+        "email_domain": "netzero.com",
+        "id": "netzero.com"
+      },
+      "timestamp": null,
+      "id": "EV-DOM-netzero.com",
+      "type": "email_domain",
+      "details": {
+        "email_domain": "netzero.com",
+        "id": "netzero.com"
       },
       "risk_signal": null
     },
@@ -159,17 +869,38 @@
     }
   ],
   "affected_transaction_ids": [
-    "TXN-HHG-010"
+    "TXN-HHG-010",
+    "3506725",
+    "3076736",
+    "3282661",
+    "3392418",
+    "3306585",
+    "3094730",
+    "3082326",
+    "3075894",
+    "3351935",
+    "3087486",
+    "3397310"
   ],
   "connected_cards": [
-    " online) at 0.90. Review and decide.\""
+    " online) at 0.90. Review and decide.\"",
+    "17379"
   ],
   "connected_card_ids": [
-    " online) at 0.90. Review and decide.\""
+    " online) at 0.90. Review and decide.\"",
+    "17379"
   ],
-  "connected_devices": [],
-  "connected_device_ids": [],
-  "exposure": 49.0,
+  "connected_devices": [
+    "Windows",
+    "iOS Device",
+    "MacOS"
+  ],
+  "connected_device_ids": [
+    "Windows",
+    "iOS Device",
+    "MacOS"
+  ],
+  "exposure": 2741.14,
   "similar_prior_cases": [
     "HHG-010"
   ],
@@ -193,10 +924,10 @@
     "sar_id": "SAR-C4A4AD3F",
     "status": "NOT_RECOMMENDED",
     "eligibility": "NOT_ELIGIBLE",
-    "exposure_usd": 49.0,
+    "exposure_usd": 2741.14,
     "reason": "No confirmed fraud policy triggers met.",
     "created_at": "2026-09-23T17:24:30.640323",
-    "updated_at": "2026-09-24T23:07:42.802841"
+    "updated_at": "2026-09-26T03:52:55.551494"
   },
   "stop_reason": "WORKFLOW_COMPLETE",
   "rules_evaluated": [
@@ -281,7 +1012,7 @@
       "severity": "HIGH"
     }
   ],
-  "reasoning_summary": "Investigation for HHG-010: Customer dispute report with disputed transaction, closed case with unknown status, and customer record with unspecified risk level.",
+  "reasoning_summary": "Investigation case HHG-010 triggered by customer report, with disputed transaction TXN-HHG-010 and high risk signal for transaction 3506725.",
   "tool_calls": [
     {
       "tool_name": "get_case",
@@ -301,7 +1032,7 @@
         "analyst_notes": "",
         "id": "HHG-010"
       },
-      "timestamp": "2026-09-24T23:06:58.493060",
+      "timestamp": "2026-09-26T03:51:26.768763",
       "error": null
     },
     {
@@ -321,9 +1052,18 @@
           "channel": "in_person",
           "status": "FLAGGED",
           "raw_edge_id": "000.03"
+        },
+        {
+          "TransactionID": "3506725",
+          "amount": 1000.03,
+          "ts": "2016-12-02 15:18:27",
+          "channel": "online",
+          "risk_score": 0.9,
+          "product_code": "R",
+          "id": "3506725"
         }
       ],
-      "timestamp": "2026-09-24T23:07:06.813701",
+      "timestamp": "2026-09-26T03:51:45.923335",
       "error": null
     },
     {
@@ -334,7 +1074,21 @@
         ]
       },
       "result": null,
-      "timestamp": "2026-09-24T23:07:07.567878",
+      "timestamp": "2026-09-26T03:51:47.220261",
+      "error": null
+    },
+    {
+      "tool_name": "get_transaction_card",
+      "arguments": {
+        "args": [
+          "3506725"
+        ]
+      },
+      "result": {
+        "card_id": "17379",
+        "id": "17379"
+      },
+      "timestamp": "2026-09-26T03:51:48.984046",
       "error": null
     },
     {
@@ -345,18 +1099,51 @@
         ]
       },
       "result": null,
-      "timestamp": "2026-09-24T23:07:16.846133",
+      "timestamp": "2026-09-26T03:52:08.037377",
+      "error": null
+    },
+    {
+      "tool_name": "get_transaction_card",
+      "arguments": {
+        "args": [
+          "3506725"
+        ]
+      },
+      "result": {
+        "card_id": "17379",
+        "id": "17379"
+      },
+      "timestamp": "2026-09-26T03:52:09.712083",
       "error": null
     },
     {
       "tool_name": "get_customer",
       "arguments": {
         "args": [
-          "CUST-HHG010"
+          "C10434"
         ]
       },
-      "result": null,
-      "timestamp": "2026-09-24T23:07:17.591233",
+      "result": {
+        "customer_id": "C10434",
+        "id": "C10434"
+      },
+      "timestamp": "2026-09-26T03:52:10.559312",
+      "error": null
+    },
+    {
+      "tool_name": "get_customer_cards",
+      "arguments": {
+        "args": [
+          "C10434"
+        ]
+      },
+      "result": [
+        {
+          "card_id": "17379",
+          "id": "17379"
+        }
+      ],
+      "timestamp": "2026-09-26T03:52:12.374185",
       "error": null
     },
     {
@@ -367,7 +1154,109 @@
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T23:07:18.394127",
+      "timestamp": "2026-09-26T03:52:13.206656",
+      "error": null
+    },
+    {
+      "tool_name": "get_card_transactions",
+      "arguments": {
+        "args": [
+          "17379"
+        ]
+      },
+      "result": [
+        {
+          "TransactionID": "3076736",
+          "amount": 50.05,
+          "ts": "2016-07-21 05:56:18",
+          "channel": "online",
+          "risk_score": 0.93,
+          "product_code": "R",
+          "id": "3076736"
+        },
+        {
+          "TransactionID": "3282661",
+          "amount": 19.98,
+          "ts": "2016-09-19 22:25:01",
+          "channel": "online",
+          "risk_score": 0.05,
+          "product_code": "H",
+          "id": "3282661"
+        },
+        {
+          "TransactionID": "3392418",
+          "amount": 58.01,
+          "ts": "2016-10-24 01:06:51",
+          "channel": "in_person",
+          "risk_score": 0.01,
+          "product_code": "W",
+          "id": "3392418"
+        },
+        {
+          "TransactionID": "3306585",
+          "amount": 670.04,
+          "ts": "2016-09-28 00:47:14",
+          "channel": "in_person",
+          "risk_score": 0.56,
+          "product_code": "W",
+          "id": "3306585"
+        },
+        {
+          "TransactionID": "3094730",
+          "amount": 59.92,
+          "ts": "2016-07-24 15:14:12",
+          "channel": "online",
+          "risk_score": 0.01,
+          "product_code": "H",
+          "id": "3094730"
+        },
+        {
+          "TransactionID": "3082326",
+          "amount": 669.99,
+          "ts": "2016-07-22 07:27:17",
+          "channel": "in_person",
+          "risk_score": 0.48,
+          "product_code": "W",
+          "id": "3082326"
+        },
+        {
+          "TransactionID": "3075894",
+          "amount": 25.06,
+          "ts": "2016-07-21 01:29:53",
+          "channel": "online",
+          "risk_score": 0.57,
+          "product_code": "H",
+          "id": "3075894"
+        },
+        {
+          "TransactionID": "3351935",
+          "amount": 59.04,
+          "ts": "2016-10-10 17:56:42",
+          "channel": "in_person",
+          "risk_score": 0.05,
+          "product_code": "W",
+          "id": "3351935"
+        },
+        {
+          "TransactionID": "3087486",
+          "amount": 50.05,
+          "ts": "2016-07-23 03:44:14",
+          "channel": "online",
+          "risk_score": 0.61,
+          "product_code": "H",
+          "id": "3087486"
+        },
+        {
+          "TransactionID": "3397310",
+          "amount": 29.97,
+          "ts": "2016-10-25 19:33:28",
+          "channel": "online",
+          "risk_score": 0.25,
+          "product_code": "H",
+          "id": "3397310"
+        }
+      ],
+      "timestamp": "2026-09-26T03:52:15.199920",
       "error": null
     },
     {
@@ -375,12 +1264,57 @@
       "arguments": {
         "args": [
           [
-            "TXN-HHG-010"
+            "TXN-HHG-010",
+            "3506725",
+            "3076736",
+            "3282661",
+            "3392418",
+            "3306585",
+            "3094730",
+            "3082326",
+            "3075894",
+            "3351935",
+            "3087486",
+            "3397310"
           ]
         ]
       },
-      "result": [],
-      "timestamp": "2026-09-24T23:07:19.139477",
+      "result": [
+        {
+          "device_id": "Windows",
+          "device_type": "",
+          "device_info": "",
+          "os": "",
+          "browser": "",
+          "screen": "",
+          "proxy_flag": "",
+          "device_status": "",
+          "id": "Windows"
+        },
+        {
+          "device_id": "iOS Device",
+          "device_type": "",
+          "device_info": "",
+          "os": "",
+          "browser": "",
+          "screen": "",
+          "proxy_flag": "",
+          "device_status": "",
+          "id": "iOS Device"
+        },
+        {
+          "device_id": "MacOS",
+          "device_type": "",
+          "device_info": "",
+          "os": "",
+          "browser": "",
+          "screen": "",
+          "proxy_flag": "",
+          "device_status": "",
+          "id": "MacOS"
+        }
+      ],
+      "timestamp": "2026-09-26T03:52:17.088009",
       "error": null
     },
     {
@@ -388,12 +1322,44 @@
       "arguments": {
         "args": [
           [
-            "TXN-HHG-010"
+            "TXN-HHG-010",
+            "3506725",
+            "3076736",
+            "3282661",
+            "3392418",
+            "3306585",
+            "3094730",
+            "3082326",
+            "3075894",
+            "3351935",
+            "3087486",
+            "3397310"
           ]
         ]
       },
-      "result": [],
-      "timestamp": "2026-09-24T23:07:19.878539",
+      "result": [
+        {
+          "region_id": "469.0",
+          "country_code": "",
+          "id": "469.0"
+        },
+        {
+          "region_id": "330.0",
+          "country_code": "",
+          "id": "330.0"
+        },
+        {
+          "region_id": "220.0",
+          "country_code": "",
+          "id": "220.0"
+        },
+        {
+          "region_id": "418.0",
+          "country_code": "",
+          "id": "418.0"
+        }
+      ],
+      "timestamp": "2026-09-26T03:52:19.139847",
       "error": null
     },
     {
@@ -401,12 +1367,48 @@
       "arguments": {
         "args": [
           [
-            "TXN-HHG-010"
+            "TXN-HHG-010",
+            "3506725",
+            "3076736",
+            "3282661",
+            "3392418",
+            "3306585",
+            "3094730",
+            "3082326",
+            "3075894",
+            "3351935",
+            "3087486",
+            "3397310"
           ]
         ]
       },
-      "result": [],
-      "timestamp": "2026-09-24T23:07:20.627681",
+      "result": [
+        {
+          "email_domain": "anonymous.com",
+          "id": "anonymous.com"
+        },
+        {
+          "email_domain": "msn.com",
+          "id": "msn.com"
+        },
+        {
+          "email_domain": "gmail.com",
+          "id": "gmail.com"
+        },
+        {
+          "email_domain": "hotmail.com",
+          "id": "hotmail.com"
+        },
+        {
+          "email_domain": "yahoo.com",
+          "id": "yahoo.com"
+        },
+        {
+          "email_domain": "netzero.com",
+          "id": "netzero.com"
+        }
+      ],
+      "timestamp": "2026-09-26T03:52:21.183689",
       "error": null
     },
     {
@@ -414,7 +1416,8 @@
       "arguments": {
         "args": [
           [
-            " online) at 0.90. Review and decide.\""
+            " online) at 0.90. Review and decide.\"",
+            "17379"
           ]
         ]
       },
@@ -431,7 +1434,7 @@
           "id": "HHG-010"
         }
       ],
-      "timestamp": "2026-09-24T23:07:22.158232",
+      "timestamp": "2026-09-26T03:52:22.837965",
       "error": null
     },
     {
@@ -442,14 +1445,14 @@
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T23:07:31.383432",
+      "timestamp": "2026-09-26T03:52:42.324316",
       "error": null
     }
   ],
   "tokens": {
-    "prompt": 1308,
-    "completion": 583,
-    "total": 1891
+    "prompt": 2340,
+    "completion": 528,
+    "total": 2868
   },
-  "latency": 10.563
+  "latency": 12.065
 }

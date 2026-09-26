@@ -5,7 +5,7 @@
   "status": "UNDER_INVESTIGATION",
   "verdict": "NEEDS_REVIEW",
   "fraud_probability": null,
-  "pattern": "Customer Dispute / Unauthorized Transaction Report",
+  "pattern": "Customer dispute report with unknown status",
   "evidence": [
     {
       "evidence_id": "EV-CASE-HHG-016",
@@ -676,7 +676,7 @@
     "exposure_usd": 594.0699999999999,
     "reason": "No confirmed fraud policy triggers met.",
     "created_at": "2026-09-23T17:27:14.056216",
-    "updated_at": "2026-09-24T23:13:10.309273"
+    "updated_at": "2026-09-26T04:00:33.777071"
   },
   "stop_reason": "WORKFLOW_COMPLETE",
   "rules_evaluated": [
@@ -761,7 +761,7 @@
       "severity": "HIGH"
     }
   ],
-  "reasoning_summary": "Investigation HHG-016: Disputed customer report and normalised graph evidence",
+  "reasoning_summary": "Investigation case HHG-016 involves a customer dispute report for a $59.67 online purchase. The customer, C09988, disputes the transaction, citing 'I never made this purchase.' The case has an unknown status and unspecified verdict. The customer record and card records are neutral, but the transaction record '3534820' has a risk signal of 0.37.",
   "tool_calls": [
     {
       "tool_name": "get_case",
@@ -781,7 +781,7 @@
         "analyst_notes": "",
         "id": "HHG-016"
       },
-      "timestamp": "2026-09-24T23:12:09.526433",
+      "timestamp": "2026-09-26T03:59:28.762125",
       "error": null
     },
     {
@@ -802,7 +802,7 @@
           "id": "3534820"
         }
       ],
-      "timestamp": "2026-09-24T23:12:21.216246",
+      "timestamp": "2026-09-26T03:59:41.076316",
       "error": null
     },
     {
@@ -816,7 +816,7 @@
         "card_id": "11242",
         "id": "11242"
       },
-      "timestamp": "2026-09-24T23:12:22.790971",
+      "timestamp": "2026-09-26T03:59:42.727828",
       "error": null
     },
     {
@@ -830,7 +830,7 @@
         "card_id": "11242",
         "id": "11242"
       },
-      "timestamp": "2026-09-24T23:12:35.856431",
+      "timestamp": "2026-09-26T03:59:56.730656",
       "error": null
     },
     {
@@ -844,7 +844,7 @@
         "customer_id": "C09988",
         "id": "C09988"
       },
-      "timestamp": "2026-09-24T23:12:36.590896",
+      "timestamp": "2026-09-26T03:59:57.560536",
       "error": null
     },
     {
@@ -860,7 +860,7 @@
           "id": "11242"
         }
       ],
-      "timestamp": "2026-09-24T23:12:38.136918",
+      "timestamp": "2026-09-26T03:59:59.197743",
       "error": null
     },
     {
@@ -871,7 +871,7 @@
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T23:12:38.895841",
+      "timestamp": "2026-09-26T04:00:00.068799",
       "error": null
     },
     {
@@ -973,7 +973,7 @@
           "id": "3374650"
         }
       ],
-      "timestamp": "2026-09-24T23:12:40.482480",
+      "timestamp": "2026-09-26T04:00:02.449328",
       "error": null
     },
     {
@@ -1008,7 +1008,7 @@
           "id": "Windows"
         }
       ],
-      "timestamp": "2026-09-24T23:12:42.206854",
+      "timestamp": "2026-09-26T04:00:04.414900",
       "error": null
     },
     {
@@ -1031,7 +1031,7 @@
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T23:12:43.123261",
+      "timestamp": "2026-09-26T04:00:05.450365",
       "error": null
     },
     {
@@ -1071,7 +1071,7 @@
           "id": "yahoo.fr"
         }
       ],
-      "timestamp": "2026-09-24T23:12:44.847391",
+      "timestamp": "2026-09-26T04:00:07.313490",
       "error": null
     },
     {
@@ -1097,7 +1097,7 @@
           "id": "HHG-016"
         }
       ],
-      "timestamp": "2026-09-24T23:12:46.376076",
+      "timestamp": "2026-09-26T04:00:08.977261",
       "error": null
     },
     {
@@ -1108,14 +1108,14 @@
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T23:12:58.746884",
+      "timestamp": "2026-09-26T04:00:22.351958",
       "error": null
     }
   ],
   "tokens": {
-    "prompt": 2217,
-    "completion": 334,
-    "total": 2551
+    "prompt": 2277,
+    "completion": 608,
+    "total": 2885
   },
-  "latency": 10.775
+  "latency": 10.496
 }

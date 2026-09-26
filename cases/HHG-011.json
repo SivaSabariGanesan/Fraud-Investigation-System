@@ -5,7 +5,7 @@
   "status": "UNDER_INVESTIGATION",
   "verdict": "NEEDS_REVIEW",
   "fraud_probability": null,
-  "pattern": "Transactions with high risk signals",
+  "pattern": "Customer dispute report for an unknown online transaction",
   "evidence": [
     {
       "evidence_id": "EV-CASE-HHG-011",
@@ -788,7 +788,7 @@
     "exposure_usd": 732.0400000000001,
     "reason": "No confirmed fraud policy triggers met.",
     "created_at": "2026-09-23T17:25:01.977598",
-    "updated_at": "2026-09-24T23:08:47.721326"
+    "updated_at": "2026-09-26T03:54:05.734964"
   },
   "stop_reason": "WORKFLOW_COMPLETE",
   "rules_evaluated": [
@@ -873,7 +873,7 @@
       "severity": "HIGH"
     }
   ],
-  "reasoning_summary": "Investigation for HHG-011: Customer report with disputed transaction, neutral case status, and unknown customer risk level.",
+  "reasoning_summary": "Investigation context for case HHG-011: Customer dispute report for a $131.30 online purchase, with 7 recent online transactions. Customer C11923 is connected to 2 cards, 2 devices, and 4 billing regions. The case has no closed status, and all transactions have an unknown status.",
   "tool_calls": [
     {
       "tool_name": "get_case",
@@ -893,7 +893,7 @@
         "analyst_notes": "",
         "id": "HHG-011"
       },
-      "timestamp": "2026-09-24T23:07:43.589011",
+      "timestamp": "2026-09-26T03:52:57.281266",
       "error": null
     },
     {
@@ -914,7 +914,7 @@
           "id": "3583368"
         }
       ],
-      "timestamp": "2026-09-24T23:07:55.151670",
+      "timestamp": "2026-09-26T03:53:09.946344",
       "error": null
     },
     {
@@ -928,7 +928,7 @@
         "card_id": "21363",
         "id": "21363"
       },
-      "timestamp": "2026-09-24T23:07:56.656317",
+      "timestamp": "2026-09-26T03:53:11.634345",
       "error": null
     },
     {
@@ -942,7 +942,7 @@
         "card_id": "21363",
         "id": "21363"
       },
-      "timestamp": "2026-09-24T23:08:09.723966",
+      "timestamp": "2026-09-26T03:53:26.292582",
       "error": null
     },
     {
@@ -956,7 +956,7 @@
         "customer_id": "C11923",
         "id": "C11923"
       },
-      "timestamp": "2026-09-24T23:08:10.488766",
+      "timestamp": "2026-09-26T03:53:27.136006",
       "error": null
     },
     {
@@ -972,7 +972,7 @@
           "id": "21363"
         }
       ],
-      "timestamp": "2026-09-24T23:08:11.978476",
+      "timestamp": "2026-09-26T03:53:28.861826",
       "error": null
     },
     {
@@ -983,7 +983,7 @@
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T23:08:12.686236",
+      "timestamp": "2026-09-26T03:53:29.719576",
       "error": null
     },
     {
@@ -1085,7 +1085,7 @@
           "id": "3024694"
         }
       ],
-      "timestamp": "2026-09-24T23:08:17.670280",
+      "timestamp": "2026-09-26T03:53:33.406332",
       "error": null
     },
     {
@@ -1131,7 +1131,7 @@
           "id": "Lenovo"
         }
       ],
-      "timestamp": "2026-09-24T23:08:19.382464",
+      "timestamp": "2026-09-26T03:53:35.403649",
       "error": null
     },
     {
@@ -1175,7 +1175,7 @@
           "id": "496.0"
         }
       ],
-      "timestamp": "2026-09-24T23:08:21.109536",
+      "timestamp": "2026-09-26T03:53:38.237419",
       "error": null
     },
     {
@@ -1211,7 +1211,7 @@
           "id": "hotmail.com"
         }
       ],
-      "timestamp": "2026-09-24T23:08:23.002699",
+      "timestamp": "2026-09-26T03:53:40.212888",
       "error": null
     },
     {
@@ -1237,7 +1237,7 @@
           "id": "HHG-011"
         }
       ],
-      "timestamp": "2026-09-24T23:08:24.539836",
+      "timestamp": "2026-09-26T03:53:41.862368",
       "error": null
     },
     {
@@ -1248,14 +1248,14 @@
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T23:08:36.661301",
+      "timestamp": "2026-09-26T03:53:55.526752",
       "error": null
     }
   ],
   "tokens": {
-    "prompt": 2236,
-    "completion": 421,
-    "total": 2657
+    "prompt": 2296,
+    "completion": 406,
+    "total": 2702
   },
-  "latency": 10.24
+  "latency": 9.328
 }

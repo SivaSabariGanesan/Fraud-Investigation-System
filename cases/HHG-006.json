@@ -5,7 +5,7 @@
   "status": "UNDER_INVESTIGATION",
   "verdict": "NEEDS_REVIEW",
   "fraud_probability": null,
-  "pattern": "Customer Dispute / Unauthorized Transaction Report",
+  "pattern": "Disputed transaction with customer report and closed case status",
   "evidence": [
     {
       "evidence_id": "EV-CASE-HHG-006",
@@ -736,7 +736,7 @@
     "exposure_usd": 1452.06,
     "reason": "No confirmed fraud policy triggers met.",
     "created_at": "2026-09-23T17:17:13.561454",
-    "updated_at": "2026-09-24T23:04:15.645077"
+    "updated_at": "2026-09-26T03:47:45.425905"
   },
   "stop_reason": "WORKFLOW_COMPLETE",
   "rules_evaluated": [
@@ -821,7 +821,7 @@
       "severity": "HIGH"
     }
   ],
-  "reasoning_summary": "Investigation for HHG-006: A customer dispute report is loaded for case HHG-006 with a 'HIGH' strength, indicating a high level of confidence in the report. The case status is 'UNKNOWN' with an unspecified verdict. The customer record 'C07297' has an unspecified risk level. Multiple transactions are observed with neutral strengths, but no clear pattern of suspicious activity is evident.",
+  "reasoning_summary": "Investigation for case HHG-006 triggered by customer report with disputed transaction (3476682) and closed case status 'UNKNOWN'. The customer, C07297, disputes the $482.12 purchase and requests card verification.",
   "tool_calls": [
     {
       "tool_name": "get_case",
@@ -841,7 +841,7 @@
         "analyst_notes": "",
         "id": "HHG-006"
       },
-      "timestamp": "2026-09-24T23:03:12.308991",
+      "timestamp": "2026-09-26T03:46:32.790172",
       "error": null
     },
     {
@@ -862,7 +862,7 @@
           "id": "3476682"
         }
       ],
-      "timestamp": "2026-09-24T23:03:25.033276",
+      "timestamp": "2026-09-26T03:46:46.208776",
       "error": null
     },
     {
@@ -876,7 +876,7 @@
         "card_id": "13729",
         "id": "13729"
       },
-      "timestamp": "2026-09-24T23:03:26.566104",
+      "timestamp": "2026-09-26T03:46:47.802559",
       "error": null
     },
     {
@@ -890,7 +890,7 @@
         "card_id": "13729",
         "id": "13729"
       },
-      "timestamp": "2026-09-24T23:03:41.053686",
+      "timestamp": "2026-09-26T03:47:03.078722",
       "error": null
     },
     {
@@ -904,7 +904,7 @@
         "customer_id": "C07297",
         "id": "C07297"
       },
-      "timestamp": "2026-09-24T23:03:41.868731",
+      "timestamp": "2026-09-26T03:47:03.881807",
       "error": null
     },
     {
@@ -920,7 +920,7 @@
           "id": "13729"
         }
       ],
-      "timestamp": "2026-09-24T23:03:43.422208",
+      "timestamp": "2026-09-26T03:47:05.552876",
       "error": null
     },
     {
@@ -931,7 +931,7 @@
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T23:03:44.189483",
+      "timestamp": "2026-09-26T03:47:06.400106",
       "error": null
     },
     {
@@ -1033,7 +1033,7 @@
           "id": "3570456"
         }
       ],
-      "timestamp": "2026-09-24T23:03:46.274165",
+      "timestamp": "2026-09-26T03:47:08.963317",
       "error": null
     },
     {
@@ -1056,7 +1056,7 @@
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T23:03:48.155868",
+      "timestamp": "2026-09-26T03:47:10.822450",
       "error": null
     },
     {
@@ -1110,7 +1110,7 @@
           "id": "315.0"
         }
       ],
-      "timestamp": "2026-09-24T23:03:50.197459",
+      "timestamp": "2026-09-26T03:47:12.790989",
       "error": null
     },
     {
@@ -1142,7 +1142,7 @@
           "id": "yahoo.com"
         }
       ],
-      "timestamp": "2026-09-24T23:03:52.093799",
+      "timestamp": "2026-09-26T03:47:14.795954",
       "error": null
     },
     {
@@ -1168,7 +1168,7 @@
           "id": "HHG-006"
         }
       ],
-      "timestamp": "2026-09-24T23:03:53.605473",
+      "timestamp": "2026-09-26T03:47:16.508746",
       "error": null
     },
     {
@@ -1179,14 +1179,14 @@
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T23:04:07.077917",
+      "timestamp": "2026-09-26T03:47:30.984666",
       "error": null
     }
   ],
   "tokens": {
-    "prompt": 2237,
-    "completion": 447,
-    "total": 2684
+    "prompt": 2297,
+    "completion": 604,
+    "total": 2901
   },
-  "latency": 7.692
+  "latency": 13.51
 }

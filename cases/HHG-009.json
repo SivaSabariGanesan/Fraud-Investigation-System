@@ -5,7 +5,7 @@
   "status": "UNDER_INVESTIGATION",
   "verdict": "NEEDS_REVIEW",
   "fraud_probability": null,
-  "pattern": "Transactions have inconsistent amounts",
+  "pattern": "Customer dispute report with high strength indicating denial of transaction",
   "evidence": [
     {
       "evidence_id": "EV-CASE-HHG-009",
@@ -792,7 +792,7 @@
     "exposure_usd": 663.99,
     "reason": "No confirmed fraud policy triggers met.",
     "created_at": "2026-09-23T17:24:04.985900",
-    "updated_at": "2026-09-24T23:06:57.656152"
+    "updated_at": "2026-09-26T03:51:24.942088"
   },
   "stop_reason": "WORKFLOW_COMPLETE",
   "rules_evaluated": [
@@ -877,7 +877,7 @@
       "severity": "HIGH"
     }
   ],
-  "reasoning_summary": "Case HHG-009: Customer dispute report loaded, but no clear evidence of fraud. ClosedCase record indicates 'UNKNOWN' status and 'UNSPECIFIED' verdict. Customer risk_level is 'UNSPECIFIED'.",
+  "reasoning_summary": "Investigation context for case HHG-009: Customer dispute report triggers investigation into a $30.02 transaction with disputed status. The customer, C08299, has a neutral risk level and no stolen cards or devices. The case has a neutral status and verdict, and no historical fraud cases are detected.",
   "tool_calls": [
     {
       "tool_name": "get_case",
@@ -897,7 +897,7 @@
         "analyst_notes": "",
         "id": "HHG-009"
       },
-      "timestamp": "2026-09-24T23:05:59.955641",
+      "timestamp": "2026-09-26T03:50:20.012923",
       "error": null
     },
     {
@@ -918,7 +918,7 @@
           "id": "3581141"
         }
       ],
-      "timestamp": "2026-09-24T23:06:10.847550",
+      "timestamp": "2026-09-26T03:50:32.024192",
       "error": null
     },
     {
@@ -932,7 +932,7 @@
         "card_id": "13026",
         "id": "13026"
       },
-      "timestamp": "2026-09-24T23:06:12.471481",
+      "timestamp": "2026-09-26T03:50:33.678649",
       "error": null
     },
     {
@@ -946,7 +946,7 @@
         "card_id": "13026",
         "id": "13026"
       },
-      "timestamp": "2026-09-24T23:06:24.877987",
+      "timestamp": "2026-09-26T03:50:47.299676",
       "error": null
     },
     {
@@ -960,7 +960,7 @@
         "customer_id": "C08299",
         "id": "C08299"
       },
-      "timestamp": "2026-09-24T23:06:25.604705",
+      "timestamp": "2026-09-26T03:50:48.170611",
       "error": null
     },
     {
@@ -976,7 +976,7 @@
           "id": "13026"
         }
       ],
-      "timestamp": "2026-09-24T23:06:27.128102",
+      "timestamp": "2026-09-26T03:50:49.935962",
       "error": null
     },
     {
@@ -987,7 +987,7 @@
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T23:06:27.856897",
+      "timestamp": "2026-09-26T03:50:50.762764",
       "error": null
     },
     {
@@ -1089,7 +1089,7 @@
           "id": "3587043"
         }
       ],
-      "timestamp": "2026-09-24T23:06:29.592646",
+      "timestamp": "2026-09-26T03:50:52.661417",
       "error": null
     },
     {
@@ -1135,7 +1135,7 @@
           "id": "Windows"
         }
       ],
-      "timestamp": "2026-09-24T23:06:31.417889",
+      "timestamp": "2026-09-26T03:50:54.579677",
       "error": null
     },
     {
@@ -1189,7 +1189,7 @@
           "id": "184.0"
         }
       ],
-      "timestamp": "2026-09-24T23:06:33.362430",
+      "timestamp": "2026-09-26T03:50:56.540134",
       "error": null
     },
     {
@@ -1217,7 +1217,7 @@
           "id": "gmail.com"
         }
       ],
-      "timestamp": "2026-09-24T23:06:35.053174",
+      "timestamp": "2026-09-26T03:50:58.323262",
       "error": null
     },
     {
@@ -1243,7 +1243,7 @@
           "id": "HHG-009"
         }
       ],
-      "timestamp": "2026-09-24T23:06:36.601765",
+      "timestamp": "2026-09-26T03:50:59.995068",
       "error": null
     },
     {
@@ -1254,14 +1254,14 @@
         ]
       },
       "result": [],
-      "timestamp": "2026-09-24T23:06:48.315566",
+      "timestamp": "2026-09-26T03:51:13.240833",
       "error": null
     }
   ],
   "tokens": {
-    "prompt": 2230,
-    "completion": 450,
-    "total": 2680
+    "prompt": 2290,
+    "completion": 469,
+    "total": 2759
   },
-  "latency": 8.563
+  "latency": 10.777
 }

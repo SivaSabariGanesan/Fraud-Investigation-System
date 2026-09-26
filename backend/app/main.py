@@ -150,10 +150,15 @@ def seed_initial_data():
                         except Exception:
                             pass
 
+                    trig_type = data.get("trigger_type") or "benchmark"
+                    trig_text = data.get("trigger_text") or f"Benchmark case {case_id}"
+
                     if existing:
                         # Ensure fields are correctly synced from benchmark file
                         existing.customer_id = cust_id
                         existing.transaction_id = txn_id or existing.transaction_id
+                        existing.trigger_type = trig_type or existing.trigger_type
+                        existing.trigger_text = trig_text or existing.trigger_text
                         existing.pattern = pattern or existing.pattern
                         if existing.exposure is None or existing.exposure == 0.0:
                             existing.exposure = exposure
@@ -162,8 +167,8 @@ def seed_initial_data():
                             case_id=case_id,
                             customer_id=cust_id,
                             transaction_id=txn_id,
-                            trigger_type="benchmark",
-                            trigger_text=f"Benchmark case {case_id}",
+                            trigger_type=trig_type,
+                            trigger_text=trig_text,
                             status=status,
                             verdict=verdict,
                             fraud_probability=fraud_prob,
